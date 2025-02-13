@@ -9,6 +9,7 @@ export default defineConfig({
       ? '/simulation-3D-City-performance/'
       : '/',
   build: {
+    emptyOutDir: true,
     outDir: 'dist',
     rollupOptions: {
       input: 'index.html',
