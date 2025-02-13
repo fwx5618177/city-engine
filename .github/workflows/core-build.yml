@@ -1,0 +1,31 @@
+name: Core Build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/core/**'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'packages/core/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Build Core
+        run: |
+          cd packages/core
+          npm run build
