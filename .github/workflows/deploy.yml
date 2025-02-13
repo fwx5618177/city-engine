@@ -6,20 +6,15 @@ on:
       - main
   workflow_dispatch:
 
-# 设置 GITHUB_TOKEN 的权限以允许部署到 GitHub Pages
+# 设置必要的权限
 permissions:
   contents: read
   pages: write
   id-token: write
-
-# 允许一次部署
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  actions: write
 
 jobs:
   build-and-deploy:
-    name: Build and Deploy
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -64,6 +59,9 @@ jobs:
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
+        with:
+          enablement: true # 自动启用 GitHub Pages
+          token: ${{ secrets.GITHUB_TOKEN }} # 显式提供 token
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
