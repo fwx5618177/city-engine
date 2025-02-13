@@ -1,4 +1,10 @@
-# 智慧城市 3D 仿真系统技术规格说明书
+<div align="center">
+
+# Smart City 3D Simulation System Technical Specification
+
+[English](./design.md) | [中文](./design.zh.md)
+
+</div>
 
 ## 一、系统架构设计
 
