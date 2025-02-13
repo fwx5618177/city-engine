@@ -1,19 +1,18 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-// 示例应用构建配置
 export default defineConfig({
   plugins: [react()],
-  base: '/simulation-3D-City-performance/',
+  base: './', // 改为相对路径
   build: {
     emptyOutDir: true,
     outDir: 'dist',
-    assetsDir: 'assets',
     rollupOptions: {
       output: {
-        entryFileNames: `assets/[name].[hash].js`,
-        chunkFileNames: `assets/[name].[hash].js`,
-        assetFileNames: `assets/[name].[hash].[ext]`,
+        // 简化输出文件名，避免复杂的hash
+        entryFileNames: `[name].js`,
+        chunkFileNames: `chunks/[name].js`,
+        assetFileNames: `assets/[name].[ext]`,
       },
     },
   },
