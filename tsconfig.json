@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@core": ["packages/core/src"],
+      "@react": ["packages/react/src"],
+      "@web-components": ["packages/web-components/src"],
+      "@examples": ["packages/examples/src"],
+      "@vue": ["packages/vue/src"],
+      "@angular": ["packages/angular/src"],
+      "@svelte": ["packages/svelte/src"]
+    }
+  },
+  "include": ["packages/**/*"],
+  "exclude": ["node_modules", "dist"]
+}

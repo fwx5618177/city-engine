@@ -1,0 +1,25 @@
+# Node.js
+node_modules/
+*.lock
+
+# Logs
+logs/
+*.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*.swn
+*.bak
+*.tmp
+
+# Build and Cache
+dist/
+.cache/
+.build/
+
+# OS generated
+.DS_Store
+Thumbs.db
