@@ -5,7 +5,7 @@ import About from './pages/About';
 import Home from './pages/Home';
 
 const App = () => (
-  <Router>
+  <Router basename="/city-engine">
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
