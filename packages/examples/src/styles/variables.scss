@@ -1,0 +1,39 @@
+// 主题变量
+$themes: (
+    light: (background: #f8f9fa,
+        text: #212529,
+        primary: #4a90e2,
+        card-bg: #ffffff,
+        glow-start: rgba(74, 144, 226, 0.1),
+        glow-end: rgba(74, 144, 226, 0.4)),
+    dark: (background: #1a1a1a,
+        text: #e9ecef,
+        primary: #63a4ff,
+        card-bg: #2d2d2d,
+        glow-start: rgba(99, 164, 255, 0.2),
+        glow-end: rgba(99, 164, 255, 0.5))
+);
+
+// 混合宏
+@mixin theme-aware($property, $key) {
+    @each $theme-name, $theme-colors in $themes {
+        [data-theme="#{$theme-name}"] & {
+            #{$property}: map-get($theme-colors, $key);
+        }
+    }
+}
+
+// 动画
+@keyframes card-glow {
+    0% {
+        opacity: 0.3;
+    }
+
+    50% {
+        opacity: 1;
+    }
+
+    100% {
+        opacity: 0.3;
+    }
+}

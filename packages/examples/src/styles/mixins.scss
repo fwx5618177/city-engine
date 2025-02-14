@@ -1,0 +1,198 @@
+// Responsive Breakpoints
+$breakpoints: (
+    'mobile': 768px,
+    'tablet': 1024px,
+    'desktop': 1280px,
+    'wide': 1440px
+);
+
+// Responsive Mixins
+@mixin respond-to($breakpoint) {
+    @if map-has-key($breakpoints, $breakpoint) {
+        @media (min-width: map-get($breakpoints, $breakpoint)) {
+            @content;
+        }
+    }
+
+    @else {
+        @warn "Unknown breakpoint `#{$breakpoint}`";
+    }
+}
+
+@mixin mobile {
+    @media (max-width: map-get($breakpoints, 'mobile')) {
+        @content;
+    }
+}
+
+@mixin tablet {
+    @media (max-width: map-get($breakpoints, 'tablet')) {
+        @content;
+    }
+}
+
+@mixin desktop {
+    @media (min-width: map-get($breakpoints, 'desktop')) {
+        @content;
+    }
+}
+
+// Layout Mixins
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@mixin flex-column {
+    display: flex;
+    flex-direction: column;
+}
+
+@mixin container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-8);
+
+    @include mobile {
+        padding: var(--spacing-4);
+    }
+}
+
+// Typography Mixins
+@mixin gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@mixin heading-large {
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    margin-bottom: var(--spacing-8);
+    text-align: center;
+
+    @include mobile {
+        font-size: var(--font-size-3xl);
+        margin-bottom: var(--spacing-6);
+    }
+}
+
+@mixin heading-medium {
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--spacing-4);
+    color: var(--text-primary);
+}
+
+// Component Mixins
+@mixin card {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    padding: var(--spacing-6);
+    box-shadow: var(--shadow-md);
+    transition: all var(--transition-base);
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+}
+
+@mixin button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-6);
+    border-radius: var(--border-radius);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-base);
+    background: var(--accent-color);
+    color: var(--text-light);
+    border: none;
+
+    &:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+
+        &:hover {
+            background: var(--bg-hover);
+        }
+    }
+}
+
+// Grid Mixins
+@mixin grid {
+    display: grid;
+    gap: var(--spacing-6);
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+
+    @include mobile {
+        gap: var(--spacing-4);
+        grid-template-columns: 1fr;
+    }
+}
+
+// Animation Mixins
+@mixin fade-in {
+    animation: fadeIn var(--transition-base);
+}
+
+@mixin slide-in {
+    animation: slideIn var(--transition-base);
+}
+
+@mixin scale-in {
+    animation: scaleIn var(--transition-base);
+}
+
+// 弹性布局快捷方式
+@mixin flex-center($direction: row) {
+    display: flex;
+    flex-direction: $direction;
+    justify-content: center;
+    align-items: center;
+}
+
+// 卡片式阴影效果
+@mixin card-elevation {
+    box-shadow: $box-shadow;
+    transition: transform $transition-fast, box-shadow $transition-fast;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+    }
+}
+
+// 按钮基础样式
+@mixin button-base {
+    padding: map-get($spacing-scale, 2) map-get($spacing-scale, 3);
+    border-radius: 6px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all $transition-fast;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+// 渐变文本效果
+@mixin gradient-text($start-color, $end-color) {
+    background: linear-gradient(135deg, $start-color, $end-color);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}

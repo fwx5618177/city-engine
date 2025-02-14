@@ -1,0 +1,289 @@
+@use './theme.module.scss';
+
+// Reset & Base styles
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html {
+    height: 100%;
+}
+
+body {
+    margin: 0;
+    min-height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: var(--font-size-base);
+    line-height: 1.5;
+    color: var(--text-primary);
+    background-color: var(--bg-primary);
+    transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+// App Layout
+.app-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    transition: background-color var(--transition-base), color var(--transition-base);
+}
+
+.main-content {
+    flex: 1;
+    width: 100%;
+    position: relative;
+}
+
+// Theme variables
+:root {
+    // Base Colors
+    --color-white: #ffffff;
+    --color-black: #1a1a1a;
+    --color-gray-100: #f8f9fa;
+    --color-gray-200: #f0f2f5;
+    --color-gray-300: #e0e0e0;
+    --color-gray-400: #b3b3b3;
+    --color-gray-500: #4a4a4a;
+    --color-gray-600: #2d2d2d;
+    --color-gray-700: #363636;
+    --color-gray-800: #404040;
+
+    // Brand Colors
+    --color-primary: #3498db;
+    --color-primary-dark: #2980b9;
+    --color-secondary: #2ecc71;
+    --color-secondary-dark: #27ae60;
+    --color-accent: #5dade2;
+    --color-accent-dark: #3498db;
+
+    // Typography
+    --font-size-base: 1rem;
+    --font-size-sm: 0.875rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    --font-size-5xl: 3rem;
+
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+
+    // Spacing
+    --spacing-1: 0.25rem;
+    --spacing-2: 0.5rem;
+    --spacing-3: 0.75rem;
+    --spacing-4: 1rem;
+    --spacing-6: 1.5rem;
+    --spacing-8: 2rem;
+    --spacing-12: 3rem;
+    --spacing-16: 4rem;
+    --spacing-24: 6rem;
+
+    // Borders & Shadows
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+    --shadow-focus: 0 0 0 3px rgba(66, 153, 225, 0.5);
+
+    // Transitions
+    --transition-base: 0.3s ease;
+    --transition-fast: 0.15s ease;
+    --transition-slow: 0.5s ease;
+}
+
+// Light Theme (default)
+:root {
+    --bg-primary: var(--color-white);
+    --bg-secondary: var(--color-gray-100);
+    --bg-tertiary: var(--color-gray-200);
+    --bg-input: var(--color-white);
+    --bg-hover: var(--color-gray-200);
+
+    --text-primary: var(--color-black);
+    --text-secondary: var(--color-gray-500);
+    --text-light: var(--color-white);
+
+    --accent-color: var(--color-primary);
+    --accent-hover: var(--color-primary-dark);
+
+    --border-color: var(--color-gray-300);
+
+    --gradient-primary: linear-gradient(135deg, var(--color-primary), var(--color-secondary));
+    --gradient-secondary: linear-gradient(135deg, var(--color-gray-100), var(--color-gray-200));
+}
+
+// Dark Theme
+:root[data-theme='dark'] {
+    --bg-primary: var(--color-black);
+    --bg-secondary: var(--color-gray-600);
+    --bg-tertiary: var(--color-gray-700);
+    --bg-input: var(--color-gray-600);
+    --bg-hover: var(--color-gray-700);
+
+    --text-primary: var(--color-white);
+    --text-secondary: var(--color-gray-400);
+    --text-light: var(--color-white);
+
+    --accent-color: var(--color-accent);
+    --accent-hover: var(--color-accent-dark);
+
+    --border-color: var(--color-gray-800);
+
+    --gradient-primary: linear-gradient(135deg, var(--color-accent), var(--color-secondary));
+    --gradient-secondary: linear-gradient(135deg, var(--color-gray-600), var(--color-black));
+}
+
+// Common animations
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scaleIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+// Animation classes
+.fadeIn {
+    animation: fadeIn var(--transition-base);
+}
+
+.slideIn {
+    animation: slideIn var(--transition-base);
+}
+
+.scaleIn {
+    animation: scaleIn var(--transition-base);
+}
+
+// Common mixins
+@mixin flex-center {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@mixin flex-between {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+@mixin gradient-text {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+@mixin responsive-padding {
+    padding: 2rem;
+
+    @media (max-width: 768px) {
+        padding: 1rem;
+    }
+}
+
+// Common utility classes
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    @include responsive-padding;
+}
+
+.card {
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: var(--card-shadow);
+    border: 1px solid var(--border-color);
+    transition: all 0.3s ease;
+
+    &:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow), 0 6px 16px rgba(0, 0, 0, 0.1);
+        border-color: var(--accent-color);
+    }
+}
+
+.button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    background: var(--accent-color);
+    color: white;
+
+    &:hover {
+        background: var(--accent-hover);
+        transform: translateY(-2px);
+    }
+
+    &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+
+        &:hover {
+            background: var(--hover-bg);
+        }
+    }
+}
+
+.grid {
+    display: grid;
+    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+
+    @media (max-width: 768px) {
+        gap: 1rem;
+        grid-template-columns: 1fr;
+    }
+}
