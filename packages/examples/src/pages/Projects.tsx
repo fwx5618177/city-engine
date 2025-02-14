@@ -1,55 +1,9 @@
 import React from 'react';
 import { FiExternalLink, FiFolder, FiGithub } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
 
+import { projects } from '@/configs/projects';
 import styles from '@/styles/pages/Projects.module.scss';
-
-interface Project {
-  title: string;
-  description: string;
-  technologies: string[];
-  githubUrl: string;
-  demoUrl: string;
-  gradient: string;
-}
-
-const projects: Project[] = [
-  {
-    title: 'Smart City Dashboard',
-    description:
-      'Real-time monitoring and visualization of city infrastructure and services.',
-    technologies: ['React', 'Three.js', 'WebGL', 'TypeScript'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #3498db, #2ecc71)',
-  },
-  {
-    title: 'Urban Planning Tool',
-    description:
-      'Interactive 3D tool for urban planning and development simulation.',
-    technologies: ['Vue.js', 'WebGL', 'Node.js', 'MongoDB'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #e74c3c, #f1c40f)',
-  },
-  {
-    title: 'Traffic Flow Simulator',
-    description:
-      'Advanced traffic simulation with AI-powered flow optimization.',
-    technologies: ['React', 'D3.js', 'Python', 'TensorFlow'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #9b59b6, #3498db)',
-  },
-  {
-    title: 'Building Information Modeling',
-    description:
-      '3D BIM solution for architectural visualization and analysis.',
-    technologies: ['Angular', 'Three.js', 'TypeScript', 'Express'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #2ecc71, #1abc9c)',
-  },
-];
 
 const Projects: React.FC = () => {
   return (
@@ -58,7 +12,8 @@ const Projects: React.FC = () => {
         <h1 className={styles.title}>Projects</h1>
         <div className={styles.grid}>
           {projects.map((project, index) => (
-            <div
+            <Link
+              to={`/projects/${index}`}
               key={project.title}
               className={styles.projectCard}
               style={{ animationDelay: `${index * 0.1}s` }}
@@ -92,7 +47,7 @@ const Projects: React.FC = () => {
                   <FiExternalLink /> Live Demo
                 </a>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

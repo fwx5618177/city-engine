@@ -1,0 +1,204 @@
+.container {
+    min-height: 100vh;
+    padding: var(--spacing-4);
+    background: var(--bg-primary);
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.header {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: var(--spacing-4) 0;
+}
+
+.backButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    color: var(--text-secondary);
+    text-decoration: none;
+    font-weight: var(--font-weight-medium);
+    transition: all var(--transition-base);
+
+    &:hover {
+        color: var(--accent-color);
+        transform: translateX(-4px);
+    }
+}
+
+.content {
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.projectBanner {
+    padding: var(--spacing-24) var(--spacing-8);
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.2);
+    }
+}
+
+.projectTitle {
+    position: relative;
+    z-index: 1;
+    color: var(--text-light);
+    font-size: var(--font-size-4xl);
+    font-weight: var(--font-weight-bold);
+    text-align: center;
+}
+
+.projectInfo {
+    padding: var(--spacing-8);
+}
+
+.description {
+    margin-bottom: var(--spacing-8);
+
+    h2 {
+        color: var(--text-primary);
+        font-size: var(--font-size-2xl);
+        margin-bottom: var(--spacing-4);
+    }
+
+    p {
+        color: var(--text-secondary);
+        line-height: 1.6;
+    }
+}
+
+.technologies {
+    margin-bottom: var(--spacing-8);
+
+    h2 {
+        color: var(--text-primary);
+        font-size: var(--font-size-2xl);
+        margin-bottom: var(--spacing-4);
+    }
+}
+
+.techGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-2);
+}
+
+.techTag {
+    background: var(--bg-tertiary);
+    color: var(--accent-color);
+    padding: var(--spacing-2) var(--spacing-4);
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+}
+
+.actions {
+    display: flex;
+    gap: var(--spacing-4);
+    margin-top: var(--spacing-8);
+}
+
+.actionButton {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--spacing-2);
+    padding: var(--spacing-3) var(--spacing-6);
+    border-radius: var(--border-radius);
+    font-weight: var(--font-weight-medium);
+    text-decoration: none;
+    transition: all var(--transition-base);
+    background: var(--accent-color);
+    color: var(--text-light);
+
+    &:hover {
+        transform: translateY(-2px);
+        background: var(--accent-hover);
+    }
+
+    &.secondary {
+        background: var(--bg-tertiary);
+        color: var(--text-primary);
+
+        &:hover {
+            background: var(--bg-hover);
+        }
+    }
+}
+
+.errorMessage {
+    text-align: center;
+    padding: var(--spacing-16);
+
+    h2 {
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-4);
+    }
+}
+
+@media (max-width: 768px) {
+    .projectBanner {
+        padding: var(--spacing-16) var(--spacing-4);
+    }
+
+    .projectTitle {
+        font-size: var(--font-size-3xl);
+    }
+
+    .projectInfo {
+        padding: var(--spacing-4);
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+}
+
+.demoContainer {
+    padding: var(--spacing-8);
+    background: var(--bg-tertiary);
+    border-radius: var(--border-radius-lg);
+    margin-top: var(--spacing-8);
+
+    h2 {
+        color: var(--text-primary);
+        font-size: var(--font-size-2xl);
+        margin-bottom: var(--spacing-6);
+    }
+
+    @media (max-width: 768px) {
+        padding: var(--spacing-4);
+    }
+}
+
+.demoWrapper {
+    position: relative;
+    min-height: 400px;
+    background: var(--bg-secondary);
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
+
+.demoLoading {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-size: var(--font-size-lg);
+}
