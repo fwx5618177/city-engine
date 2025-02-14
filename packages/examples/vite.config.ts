@@ -4,7 +4,7 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
-  base: '/simulation-3D-City-performance/',
+  base: './',
   build: {
     outDir: 'dist',
     emptyOutDir: true,
