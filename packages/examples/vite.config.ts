@@ -9,9 +9,13 @@ const base = './';
 const cesiumSource = 'node_modules/cesium/Build/Cesium';
 const cesiumBaseUrl = 'cesiumStatic';
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   define: {
-    CESIUM_BASE_URL: JSON.stringify(`/${cesiumBaseUrl}`),
+    CESIUM_BASE_URL: JSON.stringify(
+      mode === 'production'
+        ? `/city-engine/${cesiumBaseUrl}`
+        : `/${cesiumBaseUrl}`,
+    ),
   },
   plugins: [
     react(),
@@ -67,4 +71,4 @@ export default defineConfig({
       strict: false,
     },
   },
-});
+}));
