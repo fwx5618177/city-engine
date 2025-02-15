@@ -3,14 +3,15 @@ import {
   CameraEventType,
   Cartesian2,
   Cartesian3,
+  Cesium3DTileFeature,
   Cesium3DTileStyle,
+  Cesium3DTileset,
   Color,
   EllipsoidTerrainProvider,
   Entity,
   Ion,
   KmlDataSource,
   LabelStyle,
-  Math,
   OpenStreetMapImageryProvider,
   PositionProperty,
   SceneMode,
@@ -29,11 +30,35 @@ import styles from './index.module.scss';
 Ion.defaultAccessToken =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI5NzMyMzEzYi05MTE1LTQwOWItODNiYi1hNTcxMjk5YWIzODEiLCJpZCI6Mjc2MjM1LCJpYXQiOjE3Mzk2MjE1MDZ9.nwHCEKpxx8wwgop-TjIVFPpUZKt1Bkrt875whRBWnI4';
 
+// 建筑样式配置
+const BUILDING_STYLES = {
+  colors: {
+    highRise: "color('rgba(102, 204, 255, 0.9)')", // 高层建筑
+    midRise: "color('rgba(179, 229, 252, 0.9)')", // 中层建筑
+    commercial: "color('rgba(255, 235, 59, 0.9)')", // 商业建筑
+    residential: "color('rgba(129, 199, 132, 0.9)')", // 住宅建筑
+    default: "color('rgba(224, 224, 224, 0.9)')", // 默认颜色
+    selected: "color('rgba(33, 150, 243, 1.0)')", // 选中状态，增加不透明度
+    hover: "color('rgba(255, 193, 7, 0.8')", // 悬停状态
+    selectedOutline: "color('rgba(33, 150, 243, 1.0')", // 选中时的轮廓颜色
+  },
+  heights: {
+    highRise: 100,
+    midRise: 50,
+  },
+  outlineWidth: {
+    default: 1.0,
+    selected: 2.0,
+  },
+};
+
 const CityGIS: React.FC = () => {
   const cesiumContainerRef = useRef<HTMLDivElement>(null);
   const viewerRef = useRef<Viewer | null>(null);
   const [showNewBuilding, setShowNewBuilding] = useState(true);
   const [isMeasuring, setIsMeasuring] = useState(false);
+  const [buildingsTileset, setBuildingsTileset] =
+    useState<Cesium3DTileset | null>(null);
   const [layers, setLayers] = useState({
     buildings: true,
     terrain: true,
@@ -44,6 +69,11 @@ const CityGIS: React.FC = () => {
   );
   const [isLoadingKmz, setIsLoadingKmz] = useState(false);
   const [kmzVisible, setKmzVisible] = useState(true);
+  const [hoveredFeature, setHoveredFeature] =
+    useState<Cesium3DTileFeature | null>(null);
+  const [selectedFeature, setSelectedFeature] =
+    useState<Cesium3DTileFeature | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // 测量工具状态
   const measurementRef = useRef<{
@@ -52,6 +82,9 @@ const CityGIS: React.FC = () => {
     polyline?: Entity;
     label?: Entity;
   }>({});
+
+  // 在 CityGIS 组件内部添加新的 CSS 类
+  const [cursorStyle, setCursorStyle] = useState('default');
 
   useEffect(() => {
     if (!cesiumContainerRef.current) return;
@@ -104,89 +137,283 @@ const CityGIS: React.FC = () => {
       }
     };
 
+    // 设置建筑样式
+    const applyBuildingStyle = (buildingsTileset: Cesium3DTileset) => {
+      const style = new Cesium3DTileStyle({
+        color: {
+          conditions: [
+            [
+              'Boolean(${height}) && Number(${height}) > 100.0',
+              BUILDING_STYLES.colors.highRise,
+            ],
+            [
+              'Boolean(${height}) && Number(${height}) > 50.0',
+              BUILDING_STYLES.colors.midRise,
+            ],
+            ['${building} === "commercial"', BUILDING_STYLES.colors.commercial],
+            [
+              '${building} === "residential"',
+              BUILDING_STYLES.colors.residential,
+            ],
+            ['true', BUILDING_STYLES.colors.default],
+          ],
+        },
+        show: true,
+        outlineColor: "color('rgba(50, 50, 50, 0.4)')",
+        outlineWidth: 2.0,
+      });
+
+      buildingsTileset.style = style;
+
+      // 设置相机位置以更好地观察建筑群
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.camera.flyTo({
+          destination: Cartesian3.fromDegrees(116.3915, 39.9053, 1500),
+          orientation: {
+            heading: 0.7853981633974483,
+            pitch: -0.4,
+            roll: 0.0,
+          },
+        });
+      }
+    };
+
+    // 显示错误消息
+    const showError = (message: string) => {
+      setErrorMessage(message);
+      setTimeout(() => setErrorMessage(null), 3000); // 3秒后自动消失
+    };
+
+    // 获取建筑详细信息
+    const getBuildingDetails = (feature: Cesium3DTileFeature) => {
+      try {
+        const properties = {
+          type:
+            feature.getProperty('building') || feature.getProperty('function'),
+          height: feature.getProperty('height'),
+          levels: feature.getProperty('building:levels'),
+          year: feature.getProperty('start_date'),
+          address: feature.getProperty('addr:street'),
+          usage: feature.getProperty('usage'),
+          material: feature.getProperty('building:material'),
+          architect: feature.getProperty('architect'),
+          name: feature.getProperty('name'),
+        };
+
+        let description = '<table class="cesium-infoBox-defaultTable">';
+        Object.entries(properties).forEach(([key, value]) => {
+          if (value !== undefined && value !== null && value !== '') {
+            const formattedKey = key.charAt(0).toUpperCase() + key.slice(1);
+            let formattedValue = value;
+            if (key === 'height') {
+              formattedValue = `${Number(value).toFixed(2)}m`;
+            }
+            description += `
+              <tr>
+                <th>${formattedKey}</th>
+                <td>${formattedValue}</td>
+              </tr>`;
+          }
+        });
+        description += '</table>';
+
+        return description;
+      } catch (error) {
+        console.warn('Error getting building details:', error);
+        return '<p>无法获取建筑信息</p>';
+      }
+    };
+
+    // 更新建筑交互处理
+    const addBuildingInteraction = (viewer: Viewer) => {
+      const handler = new ScreenSpaceEventHandler(viewer.scene.canvas);
+
+      interface MovementEvent {
+        endPosition: Cartesian2;
+      }
+
+      interface ClickEvent {
+        position: Cartesian2;
+      }
+
+      // 鼠标移动事件
+      const handleMouseMove = (movement: MovementEvent) => {
+        if (!buildingsTileset) return;
+
+        const pickedFeature = viewer.scene.pick(movement.endPosition);
+
+        // 更新鼠标样式
+        if (pickedFeature?.primitive) {
+          setCursorStyle('pointer');
+          document.body.style.cursor = 'pointer';
+        } else {
+          setCursorStyle('default');
+          document.body.style.cursor = 'default';
+        }
+
+        // 恢复之前悬停建筑的样式
+        if (hoveredFeature && hoveredFeature !== selectedFeature) {
+          try {
+            hoveredFeature.color = Color.fromCssColorString(
+              BUILDING_STYLES.colors.default.slice(6, -2),
+            );
+            buildingsTileset.style = new Cesium3DTileStyle({
+              outlineWidth: BUILDING_STYLES.outlineWidth.default,
+            });
+          } catch (error: unknown) {
+            if (error instanceof Error) {
+              console.warn('Error resetting hover style:', error.message);
+            }
+          }
+        }
+
+        // 设置新的悬停建筑样式
+        if (pickedFeature?.primitive) {
+          const feature =
+            pickedFeature.content?.tile?.content?.batchTable?.getFeature?.(
+              pickedFeature.batchId,
+            );
+          if (feature && feature !== selectedFeature) {
+            setHoveredFeature(feature);
+            try {
+              feature.color = Color.fromCssColorString(
+                BUILDING_STYLES.colors.hover.slice(6, -2),
+              );
+              buildingsTileset.style = new Cesium3DTileStyle({
+                outlineWidth: BUILDING_STYLES.outlineWidth.default,
+              });
+            } catch (error: unknown) {
+              if (error instanceof Error) {
+                showError('无法高亮显示建筑: ' + error.message);
+              }
+            }
+          }
+        } else {
+          setHoveredFeature(null);
+        }
+      };
+
+      // 点击选择建筑
+      const handleClick = (movement: ClickEvent) => {
+        if (!buildingsTileset) return;
+
+        const pickedFeature = viewer.scene.pick(movement.position);
+
+        // 如果点击空白处，清除选中状态
+        if (!pickedFeature?.primitive) {
+          if (selectedFeature) {
+            try {
+              selectedFeature.color = Color.fromCssColorString(
+                BUILDING_STYLES.colors.default.slice(6, -2),
+              );
+              buildingsTileset.style = new Cesium3DTileStyle({
+                outlineWidth: BUILDING_STYLES.outlineWidth.default,
+              });
+            } catch (error: unknown) {
+              if (error instanceof Error) {
+                console.warn('Error resetting selection:', error.message);
+              }
+            }
+            setSelectedFeature(null);
+            viewer.selectedEntity = undefined;
+          }
+          return;
+        }
+
+        // 设置新的选中建筑样式
+        const feature =
+          pickedFeature.content?.tile?.content?.batchTable?.getFeature?.(
+            pickedFeature.batchId,
+          );
+        if (feature) {
+          // 如果点击已选中的建筑，取消选中
+          if (feature === selectedFeature) {
+            try {
+              feature.color = Color.fromCssColorString(
+                BUILDING_STYLES.colors.default.slice(6, -2),
+              );
+              buildingsTileset.style = new Cesium3DTileStyle({
+                outlineWidth: BUILDING_STYLES.outlineWidth.default,
+              });
+            } catch (error: unknown) {
+              if (error instanceof Error) {
+                console.warn('Error resetting selection:', error.message);
+              }
+            }
+            setSelectedFeature(null);
+            viewer.selectedEntity = undefined;
+            return;
+          }
+
+          // 恢复之前选中建筑的样式
+          if (selectedFeature) {
+            try {
+              selectedFeature.color = Color.fromCssColorString(
+                BUILDING_STYLES.colors.default.slice(6, -2),
+              );
+              buildingsTileset.style = new Cesium3DTileStyle({
+                outlineWidth: BUILDING_STYLES.outlineWidth.default,
+              });
+            } catch (error: unknown) {
+              if (error instanceof Error) {
+                console.warn(
+                  'Error resetting previous selection:',
+                  error.message,
+                );
+              }
+            }
+          }
+
+          setSelectedFeature(feature);
+          try {
+            // 设置选中建筑的样式
+            feature.color = Color.fromCssColorString(
+              BUILDING_STYLES.colors.selected.slice(6, -2),
+            );
+            buildingsTileset.style = new Cesium3DTileStyle({
+              outlineColor: BUILDING_STYLES.colors.selectedOutline,
+              outlineWidth: BUILDING_STYLES.outlineWidth.selected,
+            });
+
+            viewer.selectedEntity = new Entity({
+              name: '建筑信息',
+              description: getBuildingDetails(feature),
+            });
+          } catch (error: unknown) {
+            if (error instanceof Error) {
+              showError('无法显示建筑信息: ' + error.message);
+            }
+          }
+        }
+      };
+
+      handler.setInputAction(handleMouseMove, ScreenSpaceEventType.MOUSE_MOVE);
+      handler.setInputAction(handleClick, ScreenSpaceEventType.LEFT_CLICK);
+      return handler;
+    };
+
     // 添加 Cesium OSM Buildings
     const addOsmBuildings = async () => {
       try {
         if (viewer.isDestroyed()) return;
-        const buildingsTileset = await createOsmBuildingsAsync();
+        const tileset = await createOsmBuildingsAsync();
+
         if (!viewer.isDestroyed()) {
-          viewer.scene.primitives.add(buildingsTileset);
+          viewer.scene.primitives.add(tileset);
+          setBuildingsTileset(tileset);
 
-          // 设置建筑样式
-          buildingsTileset.style = new Cesium3DTileStyle({
-            color: "color('#ffffff')",
-            show: true,
-            // 增加建筑高度
-            scale: 'max(${height} * 1.5, 20)', // 最小20米高，其他建筑高度放大1.5倍
-          });
+          // 应用建筑样式
+          applyBuildingStyle(tileset);
 
-          // 添加建筑物点击事件
-          viewer.screenSpaceEventHandler.setInputAction(
-            (movement: ScreenSpaceEventHandler.PositionedEvent) => {
-              if (!viewer || viewer.isDestroyed()) return;
-              const pickedFeature = viewer.scene.pick(movement.position);
-              if (pickedFeature && pickedFeature.getProperty) {
-                // 高亮选中的建筑物，增加高亮建筑的高度
-                const highlightStyle = new Cesium3DTileStyle({
-                  color: {
-                    conditions: [
-                      [
-                        '${id} === "' + pickedFeature.getProperty('id') + '"',
-                        'color("#4169E1")',
-                      ],
-                      [true, 'color("#ffffff")'],
-                    ],
-                  },
-                  scale: 'max(${height} * 1.5, 20)', // 保持与普通建筑一致的高度
-                });
+          // 添加建筑交互
+          const interactionHandler = addBuildingInteraction(viewer);
 
-                // 确保 buildingsTileset 存在且未被销毁
-                const buildingsTileset = viewer.scene.primitives.get(0);
-                if (buildingsTileset && !buildingsTileset.isDestroyed()) {
-                  buildingsTileset.style = highlightStyle;
-                }
-
-                // 显示建筑物信息
-                let description = '<table class="cesium-infoBox-defaultTable">';
-                try {
-                  const properties = Object.keys(
-                    pickedFeature.primitive?.properties || {},
-                  );
-                  properties.forEach((property: string) => {
-                    const value = pickedFeature.getProperty(property);
-                    if (value !== undefined) {
-                      description += `
-                    <tr>
-                      <td>${property}</td>
-                      <td>${value}</td>
-                    </tr>`;
-                    }
-                  });
-                } catch (error) {
-                  console.warn('Error getting feature properties:', error);
-                }
-                description += '</table>';
-
-                if (!viewer.isDestroyed()) {
-                  viewer.selectedEntity = new Entity({
-                    name: '建筑物信息',
-                    description: description,
-                  });
-                }
-              }
-            },
-            ScreenSpaceEventType.LEFT_CLICK,
-          );
-
-          // 设置相机位置 (调整视角以更好地观察建筑群)
-          viewer.camera.flyTo({
-            destination: Cartesian3.fromDegrees(116.3915, 39.9053, 1500), // 降低高度以更好地观察建筑
-            orientation: {
-              heading: Math.toRadians(45), // 调整视角
-              pitch: Math.toRadians(-25), // 调整俯仰角
-              roll: 0.0,
-            },
-          });
+          // 在组件卸载时清理
+          return () => {
+            if (interactionHandler) {
+              interactionHandler.destroy();
+            }
+          };
         }
       } catch (error) {
         console.error('Error loading OSM Buildings:', error);
@@ -407,7 +634,10 @@ const CityGIS: React.FC = () => {
   }, [kmzDataSource]);
 
   return (
-    <div className={styles.cityGisContainer}>
+    <div className={styles.cityGisContainer} style={{ cursor: cursorStyle }}>
+      {errorMessage && (
+        <div className={styles.errorMessage}>{errorMessage}</div>
+      )}
       <div className={styles.toolbar}>
         <div className={styles.toolGroup}>
           <h3>图层控制</h3>
