@@ -12,10 +12,10 @@ import {
   Math,
   OpenStreetMapImageryProvider,
   PositionProperty,
+  SceneMode,
   ScreenSpaceEventHandler,
   ScreenSpaceEventType,
   Viewer,
-  SceneMode,
   createOsmBuildingsAsync,
   createWorldTerrainAsync,
 } from 'cesium';
@@ -110,6 +110,8 @@ const CityGIS: React.FC = () => {
           buildingsTileset.style = new Cesium3DTileStyle({
             color: "color('#ffffff')",
             show: true,
+            // 增加建筑高度
+            scale: 'max(${height} * 1.5, 20)', // 最小20米高，其他建筑高度放大1.5倍
           });
 
           // 添加建筑物点击事件
@@ -118,7 +120,7 @@ const CityGIS: React.FC = () => {
               if (!viewer || viewer.isDestroyed()) return;
               const pickedFeature = viewer.scene.pick(movement.position);
               if (pickedFeature && pickedFeature.getProperty) {
-                // 高亮选中的建筑物
+                // 高亮选中的建筑物，增加高亮建筑的高度
                 const highlightStyle = new Cesium3DTileStyle({
                   color: {
                     conditions: [
@@ -129,6 +131,7 @@ const CityGIS: React.FC = () => {
                       [true, 'color("#ffffff")'],
                     ],
                   },
+                  scale: 'max(${height} * 1.5, 20)', // 保持与普通建筑一致的高度
                 });
 
                 // 确保 buildingsTileset 存在且未被销毁
@@ -169,12 +172,12 @@ const CityGIS: React.FC = () => {
             ScreenSpaceEventType.LEFT_CLICK,
           );
 
-          // 设置相机位置 (这里以北京为例)
+          // 设置相机位置 (调整视角以更好地观察建筑群)
           viewer.camera.flyTo({
-            destination: Cartesian3.fromDegrees(116.3915, 39.9053, 2500),
+            destination: Cartesian3.fromDegrees(116.3915, 39.9053, 1500), // 降低高度以更好地观察建筑
             orientation: {
-              heading: Math.toRadians(0),
-              pitch: Math.toRadians(-35),
+              heading: Math.toRadians(45), // 调整视角
+              pitch: Math.toRadians(-25), // 调整俯仰角
               roll: 0.0,
             },
           });
