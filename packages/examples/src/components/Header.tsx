@@ -11,7 +11,7 @@ const Header = () => {
     <header className={styles.header}>
       <nav className={styles.nav}>
         <Link to="/" className={styles.logo}>
-          City3D
+          城市3D
         </Link>
         <div className={styles.navLinks}>
           <Link
@@ -20,7 +20,7 @@ const Header = () => {
               location.pathname === '/' ? styles.active : ''
             }`}
           >
-            Home
+            首页
           </Link>
           <Link
             to="/projects"
@@ -28,7 +28,7 @@ const Header = () => {
               location.pathname === '/projects' ? styles.active : ''
             }`}
           >
-            Projects
+            项目
           </Link>
         </div>
       </nav>

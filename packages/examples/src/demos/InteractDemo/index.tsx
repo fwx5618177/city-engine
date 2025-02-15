@@ -172,7 +172,7 @@ const InteractDemo: React.FC = () => {
     };
 
     // -----------------------------
-    // Mouse & Touch Events
+    // 鼠标和触摸事件
     // -----------------------------
     const mouse = new THREE.Vector2();
     function onMouseMove(event: MouseEvent) {
@@ -199,7 +199,7 @@ const InteractDemo: React.FC = () => {
     window.addEventListener('touchmove', onDocumentTouchMove, false);
 
     // -----------------------------
-    // Lighting Setup
+    // 灯光设置
     // -----------------------------
     const ambientLight = new THREE.AmbientLight(0xffffff, 4);
     const lightFront = new THREE.SpotLight(0xffffff, 20, 10);
