@@ -10,43 +10,23 @@ interface Project {
 
 export const projects: Project[] = [
   {
-    title: 'Smart City Dashboard',
+    title: '3D City Visualization',
     description:
-      'Real-time monitoring and visualization of city infrastructure and services.',
-    technologies: ['React', 'Three.js', 'WebGL', 'TypeScript'],
+      'Interactive 3D city visualization with dynamic buildings and environment effects.',
+    technologies: ['React', 'Three.js', 'TypeScript', 'GSAP'],
     githubUrl: '#',
     demoUrl: '#',
     gradient: 'linear-gradient(135deg, #3498db, #2ecc71)',
-    demoKey: 'smart-city',
+    demoKey: 'city-3d',
   },
   {
-    title: 'Urban Planning Tool',
+    title: 'Urban Traffic Flow',
     description:
-      'Interactive 3D tool for urban planning and development simulation.',
-    technologies: ['Vue.js', 'WebGL', 'Node.js', 'MongoDB'],
+      'Real-time traffic flow simulation with interactive vehicles and road networks.',
+    technologies: ['React', 'Three.js', 'TypeScript', 'GSAP'],
     githubUrl: '#',
     demoUrl: '#',
     gradient: 'linear-gradient(135deg, #e74c3c, #f1c40f)',
-    demoKey: 'urban-planning',
-  },
-  {
-    title: 'Traffic Flow Simulator',
-    description:
-      'Advanced traffic simulation with AI-powered flow optimization.',
-    technologies: ['React', 'D3.js', 'Python', 'TensorFlow'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #9b59b6, #3498db)',
-    demoKey: 'traffic-flow',
-  },
-  {
-    title: 'Building Information Modeling',
-    description:
-      '3D BIM solution for architectural visualization and analysis.',
-    technologies: ['Angular', 'Three.js', 'TypeScript', 'Express'],
-    githubUrl: '#',
-    demoUrl: '#',
-    gradient: 'linear-gradient(135deg, #2ecc71, #1abc9c)',
-    demoKey: 'building-info',
+    demoKey: 'city-car',
   },
 ];

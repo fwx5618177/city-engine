@@ -9,7 +9,8 @@ import styles from '@/styles/pages/ProjectDetails.module.scss';
 const DemoComponents: {
   [key: string]: React.LazyExoticComponent<React.ComponentType>;
 } = {
-  'smart-city': lazy(() => import('@/demos/InteractDemo')),
+  'city-3d': lazy(() => import('@/demos/InteractDemo')),
+  'city-car': lazy(() => import('@/demos/CityTour')),
 };
 
 const ProjectDetails: React.FC = () => {
