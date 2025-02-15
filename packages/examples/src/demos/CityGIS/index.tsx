@@ -8,6 +8,7 @@ import {
   EllipsoidTerrainProvider,
   Entity,
   Ion,
+  KmlDataSource,
   LabelStyle,
   Math,
   OpenStreetMapImageryProvider,
@@ -38,6 +39,11 @@ const CityGIS: React.FC = () => {
     terrain: true,
     imagery: true,
   });
+  const [kmzDataSource, setKmzDataSource] = useState<KmlDataSource | null>(
+    null,
+  );
+  const [isLoadingKmz, setIsLoadingKmz] = useState(false);
+  const [kmzVisible, setKmzVisible] = useState(true);
 
   // 测量工具状态
   const measurementRef = useRef<{
@@ -333,6 +339,73 @@ const CityGIS: React.FC = () => {
     };
   }, [isMeasuring]);
 
+  // 添加加载 KMZ 的函数
+  const loadKmzModel = async (file: File) => {
+    if (!viewerRef.current || viewerRef.current.isDestroyed()) return;
+
+    try {
+      setIsLoadingKmz(true);
+
+      // 如果已有模型，先移除
+      if (kmzDataSource) {
+        await viewerRef.current.dataSources.remove(kmzDataSource);
+      }
+
+      const url = URL.createObjectURL(file);
+      const kmlDataSource = await KmlDataSource.load(url, {
+        camera: viewerRef.current.scene.camera,
+        canvas: viewerRef.current.scene.canvas,
+      });
+
+      await viewerRef.current.dataSources.add(kmlDataSource);
+      setKmzDataSource(kmlDataSource);
+      setKmzVisible(true);
+
+      // 自动定位到模型
+      await viewerRef.current.zoomTo(kmlDataSource);
+
+      // 清理 URL
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error loading KMZ model:', error);
+    } finally {
+      setIsLoadingKmz(false);
+    }
+  };
+
+  // 添加文件上传处理
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      loadKmzModel(file);
+    }
+  };
+
+  // 切换 KMZ 模型显示/隐藏
+  const toggleKmzVisibility = () => {
+    if (kmzDataSource) {
+      kmzDataSource.show = !kmzVisible;
+      setKmzVisible(!kmzVisible);
+    }
+  };
+
+  // 删除 KMZ 模型
+  const removeKmz = async () => {
+    if (viewerRef.current && kmzDataSource) {
+      await viewerRef.current.dataSources.remove(kmzDataSource);
+      setKmzDataSource(null);
+    }
+  };
+
+  // 清理函数
+  useEffect(() => {
+    return () => {
+      if (kmzDataSource && viewerRef.current) {
+        viewerRef.current.dataSources.remove(kmzDataSource);
+      }
+    };
+  }, [kmzDataSource]);
+
   return (
     <div className={styles.cityGisContainer}>
       <div className={styles.toolbar}>
@@ -385,6 +458,40 @@ const CityGIS: React.FC = () => {
           >
             {showNewBuilding ? '隐藏新建筑' : '显示新建筑'}
           </button>
+        </div>
+        <div className={styles.toolGroup}>
+          <h3>KMZ 模型</h3>
+          <input
+            type="file"
+            accept=".kmz,.kml"
+            onChange={handleFileUpload}
+            style={{ display: 'none' }}
+            id="kmz-file-input"
+          />
+          <button
+            className={`${styles.toggleButton} ${
+              isLoadingKmz ? styles.active : ''
+            }`}
+            onClick={() => document.getElementById('kmz-file-input')?.click()}
+            disabled={isLoadingKmz}
+          >
+            {isLoadingKmz ? '加载中...' : '加载 KMZ 模型'}
+          </button>
+          {kmzDataSource && (
+            <>
+              <button
+                className={`${styles.toggleButton} ${
+                  !kmzVisible ? styles.active : ''
+                }`}
+                onClick={toggleKmzVisibility}
+              >
+                {kmzVisible ? '隐藏 KMZ' : '显示 KMZ'}
+              </button>
+              <button className={`${styles.toggleButton}`} onClick={removeKmz}>
+                删除 KMZ
+              </button>
+            </>
+          )}
         </div>
       </div>
       <div className={styles.cesiumContainer} ref={cesiumContainerRef} />
