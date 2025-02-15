@@ -3,16 +3,19 @@ import {
   CameraEventType,
   Cartesian2,
   Cartesian3,
+  Cartographic,
   Cesium3DTileFeature,
   Cesium3DTileStyle,
   Cesium3DTileset,
   Color,
   EllipsoidTerrainProvider,
   Entity,
+  HeightReference,
   Ion,
   KmlDataSource,
   LabelStyle,
   OpenStreetMapImageryProvider,
+  PolylineGlowMaterialProperty,
   PositionProperty,
   SceneMode,
   ScreenSpaceEventHandler,
@@ -33,14 +36,14 @@ Ion.defaultAccessToken =
 // 建筑样式配置
 const BUILDING_STYLES = {
   colors: {
-    highRise: "color('rgba(102, 204, 255, 0.9)')", // 高层建筑
-    midRise: "color('rgba(179, 229, 252, 0.9)')", // 中层建筑
-    commercial: "color('rgba(255, 235, 59, 0.9)')", // 商业建筑
-    residential: "color('rgba(129, 199, 132, 0.9)')", // 住宅建筑
-    default: "color('rgba(224, 224, 224, 0.9)')", // 默认颜色
-    selected: "color('rgba(33, 150, 243, 1.0)')", // 选中状态，增加不透明度
-    hover: "color('rgba(255, 193, 7, 0.8')", // 悬停状态
-    selectedOutline: "color('rgba(33, 150, 243, 1.0')", // 选中时的轮廓颜色
+    highRise: "color('rgba(102, 204, 255, 0.9)')",
+    midRise: "color('rgba(179, 229, 252, 0.9)')",
+    commercial: "color('rgba(255, 235, 59, 0.9)')",
+    residential: "color('rgba(129, 199, 132, 0.9)')",
+    default: "color('rgba(224, 224, 224, 0.9)')",
+    selected: "color('rgba(255, 0, 0, 0.9)')",
+    hover: "color('rgba(255, 193, 7, 0.8')",
+    selectedOutline: "color('rgba(255, 0, 0, 1.0')",
   },
   heights: {
     highRise: 100,
@@ -49,6 +52,27 @@ const BUILDING_STYLES = {
   outlineWidth: {
     default: 1.0,
     selected: 2.0,
+  },
+};
+
+// 射频信号配置
+const RF_SIGNAL_CONFIG = {
+  colors: {
+    strong: Color.fromCssColorString('rgba(0, 255, 0, 0.8)'),
+    medium: Color.fromCssColorString('rgba(255, 255, 0, 0.8)'),
+    weak: Color.fromCssColorString('rgba(255, 0, 0, 0.8)'),
+  },
+  thresholds: {
+    strong: -60, // dBm
+    medium: -80, // dBm
+  },
+  propagation: {
+    initialPower: 20, // dBm
+    frequency: 2400, // MHz
+    wallLoss: 5, // dB per wall
+    distanceLoss: 20, // dB per decade
+    reflectionLoss: 3, // dB per reflection
+    diffractionLoss: 6, // dB per diffraction
   },
 };
 
@@ -74,6 +98,10 @@ const CityGIS: React.FC = () => {
   const [selectedFeature, setSelectedFeature] =
     useState<Cesium3DTileFeature | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [showRfSignals, setShowRfSignals] = useState(false);
+  const [signalSources, setSignalSources] = useState<Entity[]>([]);
+  const [signalPaths, setSignalPaths] = useState<Entity[]>([]);
+  const signalEntitiesRef = useRef<Entity[]>([]);
 
   // 测量工具状态
   const measurementRef = useRef<{
@@ -295,9 +323,44 @@ const CityGIS: React.FC = () => {
 
       // 点击选择建筑
       const handleClick = (movement: ClickEvent) => {
-        if (!buildingsTileset) return;
+        if (!buildingsTileset || !viewerRef.current) return;
 
+        const viewer = viewerRef.current;
         const pickedFeature = viewer.scene.pick(movement.position);
+        const pickedPosition = viewer.scene.pickPosition(movement.position);
+
+        // 如果在信号分析模式下
+        if (showRfSignals && pickedPosition) {
+          // 如果点击到了建筑物
+          if (pickedFeature?.primitive) {
+            const feature =
+              pickedFeature.content?.tile?.content?.batchTable?.getFeature?.(
+                pickedFeature.batchId,
+              );
+            if (feature) {
+              // 清除之前选中的建筑物样式
+              if (selectedFeature) {
+                selectedFeature.color = Color.fromCssColorString(
+                  'rgba(224, 224, 224, 0.9)',
+                );
+              }
+
+              setSelectedFeature(feature);
+              // 设置新的样式
+              feature.color = Color.fromCssColorString('rgba(255, 0, 0, 0.9)');
+            }
+          }
+
+          // 添加信号源
+          const cartographic = Cartographic.fromCartesian(pickedPosition);
+          const adjustedPosition = Cartesian3.fromRadians(
+            cartographic.longitude,
+            cartographic.latitude,
+            cartographic.height + 10,
+          );
+          addSignalSource(adjustedPosition);
+          return;
+        }
 
         // 如果点击空白处，清除选中状态
         if (!pickedFeature?.primitive) {
@@ -633,6 +696,154 @@ const CityGIS: React.FC = () => {
     };
   }, [kmzDataSource]);
 
+  // 添加射频信号源
+  const addSignalSource = (position: Cartesian3) => {
+    if (!viewerRef.current) return;
+
+    const viewer = viewerRef.current;
+
+    // 创建一个圆形点作为信号源
+    const source = viewer.entities.add({
+      position,
+      point: {
+        pixelSize: 15,
+        color: Color.RED.withAlpha(0.8),
+        outlineColor: Color.WHITE,
+        outlineWidth: 2,
+        heightReference: HeightReference.RELATIVE_TO_GROUND,
+      },
+      label: {
+        text: '信号源',
+        font: '14px sans-serif',
+        style: LabelStyle.FILL_AND_OUTLINE,
+        outlineWidth: 2,
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        verticalOrigin: 1,
+        pixelOffset: new Cartesian2(0, -20),
+        heightReference: HeightReference.RELATIVE_TO_GROUND,
+      },
+    });
+
+    setSignalSources((prev) => [...prev, source]);
+    simulateSignalPropagation(source);
+  };
+
+  // 修改信号传播模拟
+  const simulateSignalPropagation = (source: Entity) => {
+    if (!viewerRef.current || !source.position || !selectedFeature) return;
+
+    const viewer = viewerRef.current;
+    const sourcePosition = source.position.getValue(viewer.clock.currentTime);
+    if (!sourcePosition) return;
+
+    // 获取建筑物的位置和高度
+    const buildingPosition = sourcePosition.clone();
+    buildingPosition.z += selectedFeature.getProperty('height') || 30;
+
+    // 创建主信号路径
+    const mainPath = viewer.entities.add({
+      polyline: {
+        positions: [sourcePosition, buildingPosition],
+        width: 3,
+        material: new PolylineGlowMaterialProperty({
+          glowPower: 0.2,
+          color: Color.YELLOW.withAlpha(0.8),
+        }),
+      },
+    });
+    setSignalPaths((prev) => [...prev, mainPath]);
+
+    // 创建信号扩散效果
+    const numRings = 5;
+    const maxRadius = 50;
+    for (let i = 0; i < numRings; i++) {
+      const radius = (i + 1) * (maxRadius / numRings);
+      const positions = generateCirclePositions(buildingPosition, radius, 36);
+
+      const ring = viewer.entities.add({
+        polyline: {
+          positions: positions,
+          width: 2,
+          material: new PolylineGlowMaterialProperty({
+            glowPower: 0.3,
+            color: Color.CYAN.withAlpha(0.6),
+          }),
+        },
+      });
+      signalEntitiesRef.current.push(ring);
+    }
+
+    // 添加信号强度标签
+    const strengthLabel = viewer.entities.add({
+      position: Cartesian3.midpoint(
+        sourcePosition,
+        buildingPosition,
+        new Cartesian3(),
+      ),
+      label: {
+        text: '信号强度分析',
+        font: '16px sans-serif',
+        fillColor: Color.WHITE,
+        outlineColor: Color.BLACK,
+        outlineWidth: 2,
+        style: LabelStyle.FILL_AND_OUTLINE,
+        verticalOrigin: 0,
+        pixelOffset: new Cartesian2(0, -20),
+        showBackground: true,
+        backgroundColor: Color.BLACK.withAlpha(0.7),
+      },
+    });
+    signalEntitiesRef.current.push(strengthLabel);
+  };
+
+  // 添加辅助函数生成圆形位置
+  const generateCirclePositions = (
+    center: Cartesian3,
+    radius: number,
+    segments: number,
+  ) => {
+    const positions = [];
+    for (let i = 0; i <= segments; i++) {
+      const angle = (i / segments) * Math.PI * 2;
+      const x = center.x + radius * Math.cos(angle);
+      const y = center.y + radius * Math.sin(angle);
+      const z = center.z;
+      positions.push(new Cartesian3(x, y, z));
+    }
+    return positions;
+  };
+
+  // 修改清理函数
+  const clearSignalVisualization = () => {
+    if (!viewerRef.current) return;
+
+    // 清理信号源
+    signalSources.forEach((source) => {
+      viewerRef.current?.entities.remove(source);
+    });
+    setSignalSources([]);
+
+    // 清理信号路径
+    signalPaths.forEach((path) => {
+      viewerRef.current?.entities.remove(path);
+    });
+    setSignalPaths([]);
+
+    // 清理信号实体
+    signalEntitiesRef.current.forEach((entity) => {
+      viewerRef.current?.entities.remove(entity);
+    });
+    signalEntitiesRef.current = [];
+  };
+
+  // 在组件卸载时清理
+  useEffect(() => {
+    return () => {
+      clearSignalVisualization();
+    };
+  }, []);
+
   return (
     <div className={styles.cityGisContainer} style={{ cursor: cursorStyle }}>
       {errorMessage && (
@@ -721,6 +932,29 @@ const CityGIS: React.FC = () => {
                 删除 KMZ
               </button>
             </>
+          )}
+        </div>
+        <div className={styles.toolGroup}>
+          <h3>信号分析</h3>
+          <button
+            className={`${styles.toggleButton} ${
+              showRfSignals ? styles.active : ''
+            }`}
+            onClick={() => {
+              setShowRfSignals(!showRfSignals);
+              if (!showRfSignals) {
+                clearSignalVisualization();
+              }
+            }}
+          >
+            {showRfSignals ? '停止信号分析' : '开始信号分析'}
+          </button>
+          {showRfSignals && (
+            <div className={styles.signalInfo}>
+              <p>点击地图添加信号源</p>
+              <p>信号频率: {RF_SIGNAL_CONFIG.propagation.frequency} MHz</p>
+              <p>初始功率: {RF_SIGNAL_CONFIG.propagation.initialPower} dBm</p>
+            </div>
           )}
         </div>
       </div>
