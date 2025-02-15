@@ -16,3 +16,5 @@ dist
 # Ignore configuration files
 .eslintrc.js
 .prettierrc
+
+city-tour/

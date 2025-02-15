@@ -9,6 +9,8 @@ import { SceneView } from './scene_view';
 import { TimerLoop } from './timer_loop';
 import { WorldTouch } from './world_touch';
 
+type WorldTouchInstance = ReturnType<typeof WorldTouch>;
+
 interface NavigationControllerInterface {
   setTerrain: (newTerrain: Terrain) => void;
   onMouseDown: (e: MouseEvent) => void;
@@ -17,6 +19,7 @@ interface NavigationControllerInterface {
   onMouseLeave: (e: MouseEvent) => void;
   onMouseWheel: (e: WheelEvent) => void;
   isGestureInProgress: () => boolean;
+  initialize: () => void;
 }
 
 class NavigationController implements NavigationControllerInterface {
@@ -29,19 +32,23 @@ class NavigationController implements NavigationControllerInterface {
   private static readonly MOUSE_SENSITIVITY = 0.4;
   private static readonly ZOOM_SENSITIVITY = 0.001;
 
-  private readonly containerToggle: HTMLElement;
-  private readonly container: HTMLElement;
-  private readonly azimuthAngleControl: HTMLInputElement;
-  private readonly tiltAngleControl: HTMLInputElement;
-  private readonly zoomInButton: HTMLElement;
-  private readonly zoomOutButton: HTMLElement;
-  private readonly flythroughToggle: HTMLElement;
+  private containerToggle: HTMLElement | null = null;
+  private container: HTMLElement | null = null;
+  private azimuthAngleControl: HTMLInputElement | null = null;
+  private tiltAngleControl: HTMLInputElement | null = null;
+  private zoomInButton: HTMLElement | null = null;
+  private zoomOutButton: HTMLElement | null = null;
+  private flythroughToggle: HTMLElement | null = null;
 
-  private isNavigationControlsVisible: boolean;
+  private isNavigationControlsVisible = false;
   private terrain: Terrain;
   private _isGestureInProgress = false;
   private previousMousePosition = new THREE.Vector2();
   private previousCenterOfAction = new THREE.Vector3();
+  private readonly worldTouch: WorldTouchInstance;
+  private isInitialized = false;
+  private initializeRetryCount = 0;
+  private static readonly MAX_RETRY_COUNT = 10;
 
   constructor(
     private readonly sceneView: SceneView,
@@ -51,91 +58,176 @@ class NavigationController implements NavigationControllerInterface {
     private readonly messageBroker: MessageBroker,
   ) {
     this.terrain = terrain;
+    this.worldTouch = WorldTouch(
+      this.sceneView.camera(),
+      NavigationController.WINDOW_CENTER,
+      this.terrain,
+    );
+  }
 
-    this.containerToggle = document.getElementById(
-      'navigation-controls-toggle',
-    )!;
-    this.container = document.getElementById(
-      'navigation-controls-inner-container',
-    )!;
-    this.azimuthAngleControl = document.getElementById(
-      'azimuth-angle',
-    ) as HTMLInputElement;
-    this.tiltAngleControl = document.getElementById(
-      'tilt-angle-percentage',
-    ) as HTMLInputElement;
-    this.zoomInButton = document.getElementById('zoom-in')!;
-    this.zoomOutButton = document.getElementById('zoom-out')!;
-    this.flythroughToggle = document.getElementById('flythrough-toggle')!;
+  public initialize(): void {
+    // Start initialization process
+    this.startInitialization();
+  }
 
-    this.containerToggle.addEventListener(
+  private startInitialization(): void {
+    console.log('Starting navigation controls initialization process');
+    // Initial delay before first attempt
+    setTimeout(() => {
+      // Ensure DOM is ready by waiting for next frame
+      requestAnimationFrame(() => {
+        this.initializeControls();
+      });
+    }, 200);
+  }
+
+  private initializeControls(): void {
+    if (this.isInitialized) {
+      console.log('Navigation controls already initialized');
+      return;
+    }
+
+    if (this.initializeRetryCount >= NavigationController.MAX_RETRY_COUNT) {
+      console.error(
+        'Failed to initialize navigation controls after maximum retries',
+      );
+      return;
+    }
+
+    // Get all required elements
+    const elements = {
+      containerToggle: document.getElementById('navigation-controls-toggle'),
+      container: document.getElementById('navigation-controls-inner-container'),
+      azimuthAngleControl: document.getElementById(
+        'azimuth-angle',
+      ) as HTMLInputElement | null,
+      tiltAngleControl: document.getElementById(
+        'tilt-angle-percentage',
+      ) as HTMLInputElement | null,
+      zoomInButton: document.getElementById('zoom-in'),
+      zoomOutButton: document.getElementById('zoom-out'),
+      flythroughToggle: document.getElementById('flythrough-toggle'),
+    };
+
+    // Log which elements are missing for debugging
+    const missingElements = Object.entries(elements)
+      .filter(([, el]) => el === null)
+      .map(([name]) => name);
+
+    if (missingElements.length > 0) {
+      console.log(
+        `Navigation controls initialization attempt ${
+          this.initializeRetryCount + 1
+        }/${NavigationController.MAX_RETRY_COUNT}`,
+      );
+      console.log('Waiting for DOM elements:', missingElements.join(', '));
+
+      this.initializeRetryCount++;
+      // Use requestAnimationFrame for next retry to ensure DOM updates
+      requestAnimationFrame(() => {
+        setTimeout(() => this.initializeControls(), 300);
+      });
+      return;
+    }
+
+    // Assign elements to class properties
+    this.containerToggle = elements.containerToggle!;
+    this.container = elements.container!;
+    this.azimuthAngleControl = elements.azimuthAngleControl!;
+    this.tiltAngleControl = elements.tiltAngleControl!;
+    this.zoomInButton = elements.zoomInButton!;
+    this.zoomOutButton = elements.zoomOutButton!;
+    this.flythroughToggle = elements.flythroughToggle!;
+
+    try {
+      // Add event listeners
+      this.setupEventListeners();
+      this.isInitialized = true;
+      console.log('Navigation controls initialized successfully');
+      // Initial render after successful initialization
+      this.render();
+    } catch (error) {
+      console.error('Error during navigation controls initialization:', error);
+      this.initializeRetryCount++;
+      requestAnimationFrame(() => {
+        setTimeout(() => this.initializeControls(), 300);
+      });
+    }
+  }
+
+  private setupEventListeners(): void {
+    // We know these elements exist because we checked in initializeControls
+    const {
+      containerToggle,
+      azimuthAngleControl,
+      tiltAngleControl,
+      zoomInButton,
+      zoomOutButton,
+      flythroughToggle,
+    } = this;
+
+    if (
+      !containerToggle ||
+      !azimuthAngleControl ||
+      !tiltAngleControl ||
+      !zoomInButton ||
+      !zoomOutButton ||
+      !flythroughToggle
+    ) {
+      console.error(
+        'Event listeners setup called before elements were initialized',
+      );
+      return;
+    }
+
+    containerToggle.addEventListener(
       'click',
       this.toggleNavigationControls,
       false,
     );
-    this.azimuthAngleControl.addEventListener(
+
+    azimuthAngleControl.addEventListener(
       'mousedown',
       this.setTargetOfAction,
       false,
     );
-    this.azimuthAngleControl.addEventListener(
+    azimuthAngleControl.addEventListener(
       'touchstart',
       this.setTargetOfAction,
       false,
     );
-    this.azimuthAngleControl.addEventListener(
-      'input',
-      this.setAzimuthAngle,
-      false,
-    );
-    this.tiltAngleControl.addEventListener(
-      'mousedown',
-      this.setCenterOfTilt,
-      false,
-    );
-    this.tiltAngleControl.addEventListener(
+    azimuthAngleControl.addEventListener('input', this.setAzimuthAngle, false);
+
+    tiltAngleControl.addEventListener('mousedown', this.setCenterOfTilt, false);
+    tiltAngleControl.addEventListener(
       'touchstart',
       this.setCenterOfTilt,
       false,
     );
-    this.tiltAngleControl.addEventListener('input', this.setTiltAngle, false);
-    this.zoomInButton.addEventListener('mousedown', this.startZoomIn, false);
-    this.zoomInButton.addEventListener('mouseup', this.stopZoom, false);
-    this.zoomInButton.addEventListener('mouseout', this.stopZoom, false);
-    this.zoomInButton.addEventListener(
-      'touchstart',
-      this.startZoomInTouch,
-      false,
-    );
-    this.zoomInButton.addEventListener('touchend', this.stopZoom, false);
-    this.zoomOutButton.addEventListener('mousedown', this.startZoomOut, false);
-    this.zoomOutButton.addEventListener('mouseup', this.stopZoom, false);
-    this.zoomOutButton.addEventListener('mouseout', this.stopZoom, false);
-    this.zoomOutButton.addEventListener(
-      'touchstart',
-      this.startZoomOutTouch,
-      false,
-    );
-    this.zoomOutButton.addEventListener('touchend', this.stopZoom, false);
-    this.flythroughToggle.addEventListener(
-      'click',
-      this.toggleFlythrough,
-      false,
-    );
+    tiltAngleControl.addEventListener('input', this.setTiltAngle, false);
 
-    this.isNavigationControlsVisible = !this.isTouchDevice();
-    this.render();
+    zoomInButton.addEventListener('mousedown', this.startZoomIn, false);
+    zoomInButton.addEventListener('touchstart', this.startZoomInTouch, false);
+    zoomInButton.addEventListener('mouseup', this.stopZoom, false);
+    zoomInButton.addEventListener('mouseleave', this.stopZoom, false);
+    zoomInButton.addEventListener('touchend', this.stopZoom, false);
 
-    messageBroker.addSubscriber('camera.updated', this.render);
-    messageBroker.addSubscriber('flythrough.started', this.onFlythroughStarted);
-    messageBroker.addSubscriber('flythrough.stopped', this.onFlythroughStopped);
+    zoomOutButton.addEventListener('mousedown', this.startZoomOut, false);
+    zoomOutButton.addEventListener('touchstart', this.startZoomOutTouch, false);
+    zoomOutButton.addEventListener('mouseup', this.stopZoom, false);
+    zoomOutButton.addEventListener('mouseleave', this.stopZoom, false);
+    zoomOutButton.addEventListener('touchend', this.stopZoom, false);
 
-    // Bind event handlers to maintain correct 'this' context
-    this.onMouseDown = this.onMouseDown.bind(this);
-    this.onMouseMove = this.onMouseMove.bind(this);
-    this.onMouseUp = this.onMouseUp.bind(this);
-    this.onMouseLeave = this.onMouseLeave.bind(this);
-    this.onMouseWheel = this.onMouseWheel.bind(this);
+    flythroughToggle.addEventListener('click', this.toggleFlythrough, false);
+
+    this.messageBroker.addSubscriber(
+      'flythrough.started',
+      this.onFlythroughStarted,
+    );
+    this.messageBroker.addSubscriber(
+      'flythrough.stopped',
+      this.onFlythroughStopped,
+    );
   }
 
   private isTouchDevice(): boolean {
@@ -146,25 +238,27 @@ class NavigationController implements NavigationControllerInterface {
     );
   }
 
-  private render = (): void => {
-    this.azimuthAngleControl.value = String(
+  private render(): void {
+    if (!this.isInitialized) return;
+
+    this.azimuthAngleControl!.value = String(
       this.mapCamera.azimuthAngle() * (180 / Math.PI),
     );
-    this.tiltAngleControl.value = String(
+    this.tiltAngleControl!.value = String(
       (this.mapCamera.tiltAngle() - this.mapCamera.maxTiltAngle()) /
         (this.mapCamera.minTiltAngle() - this.mapCamera.maxTiltAngle()),
     );
 
     if (this.isNavigationControlsVisible === true) {
-      this.containerToggle.innerHTML = NavigationController.DOWN_ARROW;
-      this.container.classList.remove('display-none');
+      this.containerToggle!.innerHTML = NavigationController.DOWN_ARROW;
+      this.container!.classList.remove('display-none');
     } else {
-      this.containerToggle.innerHTML = NavigationController.UP_ARROW;
-      this.container.classList.add('display-none');
+      this.containerToggle!.innerHTML = NavigationController.UP_ARROW;
+      this.container!.classList.add('display-none');
     }
-  };
+  }
 
-  private setTargetOfAction = (e: Event): void => {
+  private setTargetOfAction = (): void => {
     const centerOfScreenWorldTouch = WorldTouch(
       this.sceneView.camera(),
       NavigationController.WINDOW_CENTER,
@@ -174,7 +268,7 @@ class NavigationController implements NavigationControllerInterface {
     this.mapCamera.setCenterOfAction(centerOfScreenWorldTouch.worldPosition());
   };
 
-  private setCenterOfTilt = (e: Event): void => {
+  private setCenterOfTilt = (): void => {
     const centerOfScreenWorldTouch = WorldTouch(
       this.sceneView.camera(),
       NavigationController.WINDOW_CENTER,
@@ -184,7 +278,9 @@ class NavigationController implements NavigationControllerInterface {
     this.mapCamera.setCenterOfTilt(centerOfScreenWorldTouch.worldPosition());
   };
 
-  private setAzimuthAngle = (e: Event): void => {
+  private setAzimuthAngle = (): void => {
+    if (!this.isInitialized || !this.azimuthAngleControl) return;
+
     // The slider uses degrees instead of radians to avoid Firefox thinking that float values are invalid,
     // seemingly due to precision issues.
     const newAzimuthAngleInDegrees = parseInt(
@@ -199,7 +295,9 @@ class NavigationController implements NavigationControllerInterface {
     this.mapCamera.setIsVelocityEnabled(false);
   };
 
-  private setTiltAngle = (e: Event): void => {
+  private setTiltAngle = (): void => {
+    if (!this.isInitialized || !this.tiltAngleControl) return;
+
     const tiltPercentage = parseFloat(this.tiltAngleControl.value);
     const newTiltAngle = CityTourMath.lerp(
       this.mapCamera.minTiltAngle(),
@@ -211,58 +309,78 @@ class NavigationController implements NavigationControllerInterface {
     this.mapCamera.setIsVelocityEnabled(false);
   };
 
-  private startZoomIn = (e: Event): void => {
-    this.setTargetOfAction(e);
+  private startZoomIn = (): void => {
+    this.setTargetOfAction();
     this.timerLoop.setZoomAmount(NavigationController.ZOOM_DELTA_PERCENTAGE);
     this.mapCamera.setIsVelocityEnabled(false);
   };
 
   private startZoomInTouch = (e: TouchEvent): void => {
-    this.startZoomIn(e);
-
+    this.startZoomIn();
     // Prevent text in adjacent elements from being selected
     // due to a long press gesture.
     e.preventDefault();
   };
 
-  private startZoomOut = (e: Event): void => {
-    this.setTargetOfAction(e);
+  private startZoomOut = (): void => {
+    this.setTargetOfAction();
     this.timerLoop.setZoomAmount(-NavigationController.ZOOM_DELTA_PERCENTAGE);
     this.mapCamera.setIsVelocityEnabled(false);
   };
 
   private startZoomOutTouch = (e: TouchEvent): void => {
-    this.startZoomOut(e);
-
+    this.startZoomOut();
     // Prevent text in adjacent elements from being selected
     // due to a long press gesture.
     e.preventDefault();
   };
 
-  private stopZoom = (e: Event): void => {
+  private stopZoom = (): void => {
     this.timerLoop.setZoomAmount(0.0);
     this.mapCamera.setIsVelocityEnabled(false);
   };
 
-  private toggleFlythrough = (e: Event): void => {
+  private toggleFlythrough = (): void => {
     this.timerLoop.toggleFlythrough();
   };
 
-  private onFlythroughStarted = (e: Event): void => {
+  private onFlythroughStarted = (): void => {
+    if (
+      !this.isInitialized ||
+      !this.containerToggle ||
+      !this.container ||
+      !this.flythroughToggle
+    )
+      return;
+
     this.containerToggle.classList.add('display-none');
     this.container.classList.add('display-none');
     this.flythroughToggle.innerText = NavigationController.STOP_TOUR_MESSAGE;
   };
 
-  private onFlythroughStopped = (e: Event): void => {
+  private onFlythroughStopped = (): void => {
+    if (!this.isInitialized || !this.containerToggle || !this.flythroughToggle)
+      return;
+
     this.containerToggle.classList.remove('display-none');
     this.flythroughToggle.innerText = NavigationController.START_TOUR_MESSAGE;
     this.render();
   };
 
-  private toggleNavigationControls = (e: Event): void => {
+  private toggleNavigationControls = (): void => {
+    if (!this.isInitialized || !this.container || !this.containerToggle) {
+      console.warn('Navigation controls not initialized');
+      return;
+    }
+
     this.isNavigationControlsVisible = !this.isNavigationControlsVisible;
-    this.render();
+    if (this.isNavigationControlsVisible) {
+      this.container.classList.remove('display-none');
+      this.containerToggle.innerHTML = NavigationController.DOWN_ARROW;
+    } else {
+      this.container.classList.add('display-none');
+      this.containerToggle.innerHTML = NavigationController.UP_ARROW;
+    }
   };
 
   public setTerrain(newTerrain: Terrain): void {

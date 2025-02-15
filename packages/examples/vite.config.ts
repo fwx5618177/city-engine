@@ -17,9 +17,11 @@ export default defineConfig({
       '@configs': path.resolve(__dirname, './src/configs'),
     },
   },
+  assetsInclude: ['**/*.png', '**/*.jpg', '**/*.jpeg', '**/*.gif', '**/*.svg'],
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    assetsDir: 'assets',
     rollupOptions: {
       input: {
         main: resolve(__dirname, 'index.html'),
@@ -27,7 +29,7 @@ export default defineConfig({
       output: {
         entryFileNames: '[name].[hash].js',
         chunkFileNames: '[name].[hash].js',
-        assetFileNames: '[name].[hash].[ext]',
+        assetFileNames: 'assets/[name].[hash][extname]',
       },
     },
   },
@@ -40,6 +42,11 @@ export default defineConfig({
         `,
         includePaths: [path.resolve(__dirname, 'src/styles')],
       },
+    },
+  },
+  server: {
+    fs: {
+      strict: false,
     },
   },
 });

@@ -1,9 +1,9 @@
-import * as THREE from 'three';
-
 import { MessageBroker } from '../message_broker';
 import { Terrain } from '../terrain';
 
 import { GestureProcessor, GestureType } from './gesture_processor';
+import { MapCamera } from './map_camera';
+import { SceneView } from './scene_view';
 import { WorldTouchCollection } from './world_touch_collection';
 
 export interface NavigationTouchControllerInterface {
@@ -16,33 +16,30 @@ export interface NavigationTouchControllerInterface {
 export class NavigationTouchController
   implements NavigationTouchControllerInterface
 {
-  private readonly camera: THREE.Camera;
-  private readonly messageBroker: MessageBroker;
-  private terrain: Terrain;
   private gestureProcessor: GestureProcessor;
   private touchCollection: WorldTouchCollection | undefined;
   private isGestureInProgress: boolean;
+  private terrain: Terrain;
 
   constructor(
-    camera: THREE.Camera,
+    private readonly sceneView: SceneView,
+    private readonly mapCamera: MapCamera,
     terrain: Terrain,
-    messageBroker: MessageBroker,
+    private readonly messageBroker: MessageBroker,
   ) {
-    this.camera = camera;
     this.terrain = terrain;
-    this.messageBroker = messageBroker;
-    this.gestureProcessor = new GestureProcessor(camera, terrain);
+    this.gestureProcessor = new GestureProcessor(sceneView, mapCamera, terrain);
     this.isGestureInProgress = false;
   }
 
-  public setTerrain(terrain: Terrain): void {
-    this.terrain = terrain;
-    this.gestureProcessor.setTerrain(terrain);
+  public setTerrain(newTerrain: Terrain): void {
+    this.terrain = newTerrain;
+    this.gestureProcessor.setTerrain(newTerrain);
   }
 
   public onTouchStart(touchPoints: { x: number; y: number }[]): void {
     this.touchCollection = new WorldTouchCollection(
-      this.camera,
+      this.sceneView.camera(),
       this.terrain,
       touchPoints,
     );
@@ -55,7 +52,7 @@ export class NavigationTouchController
     }
 
     const newTouchCollection = new WorldTouchCollection(
-      this.camera,
+      this.sceneView.camera(),
       this.terrain,
       touchPoints,
     );

@@ -14,8 +14,7 @@ import { Timer } from '../timer';
 
 import { MapCamera } from './map_camera';
 import { SceneView } from './scene_view';
-import type { WorldTouch } from './world_touch';
-import { WorldTouch } from './world_touch';
+import type { WorldTouchInterface } from './world_touch';
 
 const HALF_PI = Math.PI * 0.5;
 
@@ -44,15 +43,16 @@ export class TimerLoop implements TimerLoopInterface {
   private vehicleController?: VehicleController;
   private vehicleView?: VehicleView;
   private flythroughToManualModeAnimation?: Animation;
+
   constructor(
     private worldData: WorldData,
     private readonly sceneView: SceneView,
     private readonly mapCamera: MapCamera,
     private readonly messageBroker: MessageBroker,
-    private readonly worldTouch: WorldTouch,
+    private readonly worldTouch: WorldTouchInterface,
   ) {
-    this.camera = sceneView.camera();
     this.timer = new Timer();
+    this.camera = sceneView.camera();
     this.timer.onTick = this.onTick;
     this.timer.start();
 

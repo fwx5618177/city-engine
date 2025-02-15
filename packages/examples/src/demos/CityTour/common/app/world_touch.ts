@@ -7,6 +7,7 @@ export interface WorldTouchInterface {
   normalizedScreenX(): number;
   normalizedScreenY(): number;
   worldPosition(): THREE.Vector3;
+  normalizedScreenPointToWorldPoint(x: number, y: number): THREE.Vector3;
 }
 
 /*
@@ -24,11 +25,12 @@ export function WorldTouch(
   // Adapted from https://stackoverflow.com/questions/13055214/mouse-canvas-x-y-to-three-js-world-x-y-z#13091694
   const screenCoordinateToWorldPosition = (
     camera: THREE.Camera,
+    screenVector: THREE.Vector3 = normalizedScreenVector,
   ): THREE.Vector3 => {
     const MAX_ITERATIONS = 1000;
 
-    normalizedScreenVector.unproject(camera);
-    const direction = normalizedScreenVector.sub(camera.position).normalize();
+    screenVector.unproject(camera);
+    const direction = screenVector.sub(camera.position).normalize();
     let ray = camera.position.clone();
     const movementTowardXZPlaneAmount = direction
       .clone()
@@ -42,7 +44,7 @@ export function WorldTouch(
 
       if (
         terrain.isPointInBounds(ray.x, ray.z) &&
-        ray.y <= terrain.heightAt(ray.x, ray.z)
+        ray.y <= (terrain.heightAt(ray.x, ray.z) ?? Infinity)
       ) {
         worldPosition = ray.clone();
         break;
@@ -63,5 +65,12 @@ export function WorldTouch(
     normalizedScreenX: () => normalizedScreenX,
     normalizedScreenY: () => normalizedScreenY,
     worldPosition: () => worldPosition,
+    normalizedScreenPointToWorldPoint: (
+      x: number,
+      y: number,
+    ): THREE.Vector3 => {
+      const newScreenVector = new THREE.Vector3(x, y, 0);
+      return screenCoordinateToWorldPosition(camera, newScreenVector);
+    },
   };
 }

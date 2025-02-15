@@ -31,6 +31,8 @@ interface MapCameraInterface {
   setCenterOfTilt(position: THREE.Vector3): void;
   rotateAzimuthAroundCenterOfAction(azimuthAngleDelta: number): void;
   tiltCamera(tiltAngleDelta: number): void;
+  centerOfAction(): THREE.Vector3 | undefined;
+  centerOfTilt(): THREE.Vector3 | undefined;
 }
 
 export class MapCamera implements MapCameraInterface {
@@ -44,8 +46,8 @@ export class MapCamera implements MapCameraInterface {
   private static readonly MAX_TILT_ANGLE = -0.1;
   private static readonly MAX_DISTANCE_FROM_CITY_CENTER = 200.0;
 
-  private centerOfAction?: THREE.Vector3;
-  private centerOfTilt?: THREE.Vector3;
+  private _centerOfActionPoint?: THREE.Vector3;
+  private _centerOfTiltPoint?: THREE.Vector3;
   private zoomCameraToCenterOfActionVector?: THREE.Vector3;
   private _isVelocityEnabled = false;
   private panVelocityX = 0;
@@ -69,8 +71,8 @@ export class MapCamera implements MapCameraInterface {
     this.camera().position.z = 60;
     this.camera().lookAt(new THREE.Vector3(0.0, 0.0, 0.0));
 
-    this.centerOfAction = undefined;
-    this.centerOfTilt = undefined;
+    this._centerOfActionPoint = undefined;
+    this._centerOfTiltPoint = undefined;
     this.zoomCameraToCenterOfActionVector = undefined;
 
     this.setIsVelocityEnabled(false);
@@ -165,9 +167,9 @@ export class MapCamera implements MapCameraInterface {
     this.camera().updateMatrixWorld();
   }
 
-  public setCenterOfAction(position: THREE.Vector3): void {
-    this.centerOfAction = position;
-    this.centerOfTilt = undefined;
+  public setCenterOfAction(position: THREE.Vector3 | undefined): void {
+    this._centerOfActionPoint = position;
+    this._centerOfTiltPoint = undefined;
     this.zoomCameraToCenterOfActionVector = undefined;
 
     if (!position) {
@@ -179,18 +181,18 @@ export class MapCamera implements MapCameraInterface {
     }
   }
 
-  public setCenterOfTilt(position: THREE.Vector3): void {
-    this.centerOfTilt = position;
+  public setCenterOfTilt(position: THREE.Vector3 | undefined): void {
+    this._centerOfTiltPoint = position;
   }
 
   public zoomTowardCenterOfAction(zoomDistancePercentage: number): void {
-    if (!this.centerOfAction) return;
+    if (!this._centerOfActionPoint) return;
 
     if (!this.zoomCameraToCenterOfActionVector) {
       this.zoomCameraToCenterOfActionVector = new THREE.Vector3(
-        this.camera().position.x - this.centerOfAction.x,
-        this.camera().position.y - this.centerOfAction.y,
-        this.camera().position.z - this.centerOfAction.z,
+        this.camera().position.x - this._centerOfActionPoint.x,
+        this.camera().position.y - this._centerOfActionPoint.y,
+        this.camera().position.z - this._centerOfActionPoint.z,
       );
     }
 
@@ -198,9 +200,9 @@ export class MapCamera implements MapCameraInterface {
       this.camera().position.x,
       this.camera().position.y,
       this.camera().position.z,
-      this.centerOfAction.x,
-      this.centerOfAction.y,
-      this.centerOfAction.z,
+      this._centerOfActionPoint.x,
+      this._centerOfActionPoint.y,
+      this._centerOfActionPoint.z,
     );
 
     const distanceToCenterOfCity = CityTourMath.distanceBetweenPoints3D(
@@ -247,18 +249,18 @@ export class MapCamera implements MapCameraInterface {
   }
 
   public rotateAzimuthAroundCenterOfAction(azimuthAngleDelta: number): void {
-    if (!this.centerOfAction) return;
+    if (!this._centerOfActionPoint) return;
 
     const distanceCameraToCenterOfAction = CityTourMath.distanceBetweenPoints(
       this.camera().position.x,
       this.camera().position.z,
-      this.centerOfAction.x,
-      this.centerOfAction.z,
+      this._centerOfActionPoint.x,
+      this._centerOfActionPoint.z,
     );
 
     const originalAngleCameraToCenterOfAction = Math.atan2(
-      -(this.camera().position.z - this.centerOfAction.z),
-      this.camera().position.x - this.centerOfAction.x,
+      -(this.camera().position.z - this._centerOfActionPoint.z),
+      this.camera().position.x - this._centerOfActionPoint.x,
     );
 
     const newAngleCameraToCenterOfAction =
@@ -269,12 +271,12 @@ export class MapCamera implements MapCameraInterface {
     this.camera().position.x =
       distanceCameraToCenterOfAction *
         Math.cos(newAngleCameraToCenterOfAction) +
-      this.centerOfAction.x;
+      this._centerOfActionPoint.x;
     this.camera().position.z =
       -(
         distanceCameraToCenterOfAction *
         Math.sin(newAngleCameraToCenterOfAction)
-      ) + this.centerOfAction.z;
+      ) + this._centerOfActionPoint.z;
     this.camera().rotation.y += azimuthAngleDelta;
 
     if (this.camera().rotation.y > Math.PI) {
@@ -289,8 +291,8 @@ export class MapCamera implements MapCameraInterface {
     );
     if (this.camera().position.y < minimumCameraY) {
       this.camera().position.y = minimumCameraY;
-      this.centerOfAction.y = minimumCameraY;
-      this.setCenterOfAction(this.centerOfAction);
+      this._centerOfActionPoint.y = minimumCameraY;
+      this.setCenterOfAction(this._centerOfActionPoint);
     }
 
     this.resetVelocities();
@@ -301,15 +303,15 @@ export class MapCamera implements MapCameraInterface {
   }
 
   public tiltCamera(tiltAngleDelta: number): void {
-    if (!this.centerOfTilt) return;
+    if (!this._centerOfTiltPoint) return;
 
     const distanceCameraToCenterOfAction = CityTourMath.distanceBetweenPoints3D(
       this.camera().position.x,
       this.camera().position.y,
       this.camera().position.z,
-      this.centerOfTilt.x,
-      this.centerOfTilt.y,
-      this.centerOfTilt.z,
+      this._centerOfTiltPoint.x,
+      this._centerOfTiltPoint.y,
+      this._centerOfTiltPoint.z,
     );
 
     const newTiltAngle = CityTourMath.clamp(
@@ -334,7 +336,7 @@ export class MapCamera implements MapCameraInterface {
         this.camera().rotation.y,
       );
       this.camera().position.setFromSpherical(spherical);
-      this.camera().position.add(this.centerOfTilt);
+      this.camera().position.add(this._centerOfTiltPoint);
 
       this.camera().position.y = Math.max(
         this.camera().position.y,
@@ -411,15 +413,78 @@ export class MapCamera implements MapCameraInterface {
     }
   }
 
-  public rotateXZ(_deltaX: number, _deltaY: number): void {
-    // Implementation needed
+  public rotateXZ(deltaX: number, deltaY: number): void {
+    if (!this._centerOfActionPoint) {
+      return;
+    }
+
+    const distanceCameraToCenterOfAction = CityTourMath.distanceBetweenPoints(
+      this.camera().position.x,
+      this.camera().position.z,
+      this._centerOfActionPoint.x,
+      this._centerOfActionPoint.z,
+    );
+
+    const originalAngleCameraToCenterOfAction = Math.atan2(
+      -(this.camera().position.z - this._centerOfActionPoint.z),
+      this.camera().position.x - this._centerOfActionPoint.x,
+    );
+
+    const newAngleCameraToCenterOfAction =
+      originalAngleCameraToCenterOfAction + deltaX;
+
+    this.zoomCameraToCenterOfActionVector = undefined;
+
+    this.camera().position.x =
+      distanceCameraToCenterOfAction *
+        Math.cos(newAngleCameraToCenterOfAction) +
+      this._centerOfActionPoint.x;
+    this.camera().position.z =
+      -(
+        distanceCameraToCenterOfAction *
+        Math.sin(newAngleCameraToCenterOfAction)
+      ) + this._centerOfActionPoint.z;
+    this.camera().rotation.y += deltaX;
+
+    if (this.camera().rotation.y > Math.PI) {
+      this.camera().rotation.y -= TWO_PI;
+    } else if (this.camera().rotation.y < -Math.PI) {
+      this.camera().rotation.y += TWO_PI;
+    }
+
+    const minimumCameraY = this.minimumCameraHeightAtCoordinates(
+      this.camera().position.x,
+      this.camera().position.z,
+    );
+    if (this.camera().position.y < minimumCameraY) {
+      this.camera().position.y = minimumCameraY;
+      this._centerOfActionPoint.y = minimumCameraY;
+      this.setCenterOfAction(this._centerOfActionPoint);
+    }
+
+    this.resetVelocities();
+    this.azimuthRotationVelocity = deltaX;
+    this.tiltRotationVelocity = deltaY;
+
+    this.camera().updateMatrixWorld();
+    this.messageBroker.publish('camera.updated', {});
   }
 
-  public zoomToPoint(_point: THREE.Vector3, _zoomDelta: number): void {
-    // Implementation needed
+  public zoomToPoint(point: THREE.Vector3, zoomDelta: number): void {
+    this.setCenterOfAction(point);
+    this.zoomTowardCenterOfAction(zoomDelta);
   }
 
-  public rotateAroundPoint(_point: THREE.Vector3, _angle: number): void {
-    // Implementation needed
+  public rotateAroundPoint(point: THREE.Vector3, angle: number): void {
+    this.setCenterOfAction(point);
+    this.rotateAzimuthAroundCenterOfAction(angle);
+  }
+
+  public centerOfAction(): THREE.Vector3 | undefined {
+    return this._centerOfActionPoint;
+  }
+
+  public centerOfTilt(): THREE.Vector3 | undefined {
+    return this._centerOfTiltPoint;
   }
 }

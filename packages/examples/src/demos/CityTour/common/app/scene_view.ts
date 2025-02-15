@@ -74,11 +74,19 @@ class SceneView implements SceneViewInterface {
     gridTexture.repeat = new THREE.Vector2(40, 40);
     gridTexture.wrapS = THREE.RepeatWrapping;
     gridTexture.wrapT = THREE.RepeatWrapping;
+    gridTexture.needsUpdate = true;
 
-    window.addEventListener('resize', this.renderView.resize, false);
+    window.addEventListener('resize', this.resize.bind(this), false);
 
     this.buildGestureMarkerMeshes();
     this._scene.add(this.sceneBuilder.buildGridPlaneMeshes()[0]);
+    this.render();
+
+    console.log(
+      'Scene initialized with camera position:',
+      this._camera.position,
+    );
+    console.log('Scene contains objects:', this._scene.children.length);
   }
 
   private buildGestureMarkerMeshes(): void {
@@ -155,19 +163,21 @@ class SceneView implements SceneViewInterface {
 
   private destroyPreviousMeshes(): void {
     const meshGroupNames = [
+      SceneView.GRID_PLANE_MESH_GROUP_NAME,
       SceneView.TERRAIN_MESH_GROUP_NAME,
       SceneView.ROAD_NETWORK_MESH_GROUP_NAME,
       SceneView.BUILDINGS_MESH_GROUP_NAME,
+      SceneView.GESTURE_MARKERS_MESH_GROUP_NAME,
       SceneView.NEIGHBORHOOD_CENTERS_MESH_GROUP_NAME,
       SceneView.ROUTE_CURVES_MESH_GROUP_NAME,
     ];
 
-    for (const meshGroupName of meshGroupNames) {
-      const meshGroup = this._scene.getObjectByName(meshGroupName);
-      if (meshGroup !== undefined) {
-        this.removeChildFromScene(meshGroup);
+    meshGroupNames.forEach((groupName) => {
+      const group = this._scene.getObjectByName(groupName);
+      if (group) {
+        this._scene.remove(group);
       }
-    }
+    });
   }
 
   private syncRouteCurves(): void {
@@ -193,80 +203,48 @@ class SceneView implements SceneViewInterface {
   }
 
   public reset(newWorldData: WorldData): void {
-    const masterStartTime = new Date();
-    let meshes: THREE.Mesh[];
+    this.clearMeshes();
 
-    this.destroyPreviousMeshes();
-    this.routeCurves = [];
-
-    const terrainStartTime = new Date();
-    meshes = this.sceneBuilder.buildTerrainMeshes(
-      newWorldData.terrain,
-      newWorldData.roadNetwork,
+    this._scene.add(this.sceneBuilder.buildGridPlaneMeshes()[0]);
+    this._scene.add(
+      this.sceneBuilder.buildTerrainMeshes(
+        newWorldData.terrain,
+        newWorldData.roadNetwork,
+      )[0],
     );
     this._scene.add(
-      this.buildMeshGroup(SceneView.TERRAIN_MESH_GROUP_NAME, meshes),
-    );
-    const terrainEndTime = new Date();
-
-    const roadStartTime = new Date();
-    meshes = this.sceneBuilder.buildRoadNetworkMeshes(
-      newWorldData.terrain,
-      newWorldData.roadNetwork,
+      this.sceneBuilder.buildRoadNetworkMeshes(
+        newWorldData.terrain,
+        newWorldData.roadNetwork,
+      )[0],
     );
     this._scene.add(
-      this.buildMeshGroup(SceneView.ROAD_NETWORK_MESH_GROUP_NAME, meshes),
+      this.sceneBuilder.buildBuildingMeshes(newWorldData.buildings)[0],
     );
-    const roadEndTime = new Date();
 
-    const buildingsStartTime = new Date();
-    meshes = this.sceneBuilder.buildBuildingMeshes(newWorldData.buildings);
-    this._scene.add(
-      this.buildMeshGroup(SceneView.BUILDINGS_MESH_GROUP_NAME, meshes),
-    );
-    const buildingsEndTime = new Date();
+    if (this._isNeighborhoodCentersVisible) {
+      const neighborhoodCentersMeshes =
+        this.sceneBuilder.buildNeighborhoodCentersMeshes(
+          newWorldData.terrain,
+          newWorldData.neighborhoods,
+        );
+      const group = new THREE.Group();
+      group.name = SceneView.NEIGHBORHOOD_CENTERS_MESH_GROUP_NAME;
+      neighborhoodCentersMeshes.forEach((mesh) => group.add(mesh));
+      group.visible = this._isNeighborhoodCentersVisible;
+      this._scene.add(group);
+    }
 
-    meshes = this.sceneBuilder.buildNeighborhoodCentersMeshes(
-      newWorldData.terrain,
-      newWorldData.neighborhoods,
-    );
-    const neighborhoodCentersGroup = this.buildMeshGroup(
-      SceneView.NEIGHBORHOOD_CENTERS_MESH_GROUP_NAME,
-      meshes,
-    );
-    neighborhoodCentersGroup.visible = this._isNeighborhoodCentersVisible;
-    this._scene.add(neighborhoodCentersGroup);
-
-    const masterEndTime = new Date();
-
-    console.log(
-      'Time to generate scene geometry: ' +
-        (masterEndTime.getTime() - masterStartTime.getTime()) +
-        'ms',
-    );
-    console.log(
-      '  Terrain:   ' +
-        (terrainEndTime.getTime() - terrainStartTime.getTime()) +
-        'ms',
-    );
-    console.log(
-      '  Roads:     ' +
-        (roadEndTime.getTime() - roadStartTime.getTime()) +
-        'ms',
-    );
-    console.log(
-      '  Buildings: ' +
-        (buildingsEndTime.getTime() - buildingsStartTime.getTime()) +
-        'ms',
-    );
+    this.render();
   }
 
   public resize(): void {
     this.renderView.resize();
+    this.render();
   }
 
   public render(): void {
-    this.renderView.render();
+    this.renderView.render(this._scene);
   }
 
   public camera(): THREE.Camera {
@@ -295,7 +273,7 @@ class SceneView implements SceneViewInterface {
 
   public setRouteCurves(newRouteCurves: THREE.Curve<THREE.Vector3>[]): void {
     this.routeCurves = newRouteCurves;
-    this.syncRouteCurves();
+    this.render();
   }
 
   public isGestureMarkersVisible(): boolean {
@@ -304,14 +282,13 @@ class SceneView implements SceneViewInterface {
 
   public setIsGestureMarkersVisible(newIsGestureMarkersVisible: boolean): void {
     this._isGestureMarkersVisible = newIsGestureMarkersVisible;
-
     const group = this._scene.getObjectByName(
       SceneView.GESTURE_MARKERS_MESH_GROUP_NAME,
     );
     if (group) {
       group.visible = newIsGestureMarkersVisible;
+      this.render();
     }
-    this.renderView.makeDirty();
   }
 
   public isNeighborhoodCentersVisible(): boolean {
@@ -322,14 +299,13 @@ class SceneView implements SceneViewInterface {
     newIsNeighborhoodCentersVisible: boolean,
   ): void {
     this._isNeighborhoodCentersVisible = newIsNeighborhoodCentersVisible;
-
     const group = this._scene.getObjectByName(
       SceneView.NEIGHBORHOOD_CENTERS_MESH_GROUP_NAME,
     );
     if (group) {
       group.visible = newIsNeighborhoodCentersVisible;
+      this.render();
     }
-    this.renderView.makeDirty();
   }
 
   public isRouteCurvesVisible(): boolean {
@@ -338,9 +314,18 @@ class SceneView implements SceneViewInterface {
 
   public setIsRouteCurvesVisible(newIsRouteCurvesVisible: boolean): void {
     this._isRouteCurvesVisible = newIsRouteCurvesVisible;
+    const group = this._scene.getObjectByName(
+      SceneView.ROUTE_CURVES_MESH_GROUP_NAME,
+    );
+    if (group) {
+      group.visible = newIsRouteCurvesVisible;
+      this.render();
+    }
+  }
 
-    this.syncRouteCurves();
-    this.renderView.makeDirty();
+  private clearMeshes(): void {
+    this.destroyPreviousMeshes();
+    this.routeCurves = [];
   }
 }
 

@@ -1,39 +1,65 @@
 import * as THREE from 'three';
 
-interface RenderViewInterface {
-  resize: () => void;
-  render: () => void;
-  camera: () => THREE.Camera;
-  domElement: () => HTMLElement;
-  renderer: () => THREE.WebGLRenderer;
-  makeDirty: () => void;
-}
-
-class RenderView implements RenderViewInterface {
+export class RenderView {
   private readonly _renderer: THREE.WebGLRenderer;
   private readonly _camera: THREE.PerspectiveCamera;
-  private readonly _scene: THREE.Scene;
-  private _isDirty = true;
 
   constructor(containerEl: HTMLElement, scene: THREE.Scene) {
-    this._scene = scene;
+    // Create renderer with proper settings
+    this._renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true,
+      powerPreference: 'high-performance',
+    });
 
-    this._renderer = new THREE.WebGLRenderer({ antialias: true });
+    // Set renderer size and pixel ratio
+    this._renderer.setSize(
+      containerEl.clientWidth,
+      containerEl.clientHeight,
+      false,
+    );
     this._renderer.setPixelRatio(window.devicePixelRatio);
-    this._renderer.setSize(containerEl.clientWidth, containerEl.clientHeight);
+
+    // Configure renderer
+    this._renderer.setClearColor(0x000000, 0);
+    this._renderer.shadowMap.enabled = true;
+    this._renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    // Clear container and append canvas
+    while (containerEl.firstChild) {
+      containerEl.removeChild(containerEl.firstChild);
+    }
     containerEl.appendChild(this._renderer.domElement);
 
+    // Create and configure camera
     this._camera = new THREE.PerspectiveCamera(
-      45,
-      containerEl.clientWidth / containerEl.clientHeight,
-      0.1,
-      10000,
+      45, // Field of view
+      containerEl.clientWidth / containerEl.clientHeight, // Aspect ratio
+      0.1, // Near plane
+      10000, // Far plane
     );
-    this._camera.position.set(0, 150, 400);
+
+    // Set initial camera position and orientation
+    this._camera.position.set(0, 150, 150);
     this._camera.lookAt(new THREE.Vector3(0, 0, 0));
+    this._camera.updateProjectionMatrix();
+
+    // Perform initial render
+    this._renderer.render(scene, this._camera);
+
+    // Log initialization
+    console.log('RenderView initialized:', {
+      containerSize: `${containerEl.clientWidth}x${containerEl.clientHeight}`,
+      pixelRatio: window.devicePixelRatio,
+      cameraPosition: this._camera.position,
+    });
+
+    // Bind resize handler
+    this.resize = this.resize.bind(this);
   }
 
-  public resize(): void {
+  public resize = (): void => {
     const containerEl = this._renderer.domElement.parentElement;
     if (!containerEl) return;
 
@@ -42,33 +68,26 @@ class RenderView implements RenderViewInterface {
 
     this._camera.aspect = width / height;
     this._camera.updateProjectionMatrix();
+    this._renderer.setSize(width, height, false);
+  };
 
-    this._renderer.setSize(width, height);
-    this.makeDirty();
-  }
-
-  public render(): void {
-    if (this._isDirty) {
-      this._renderer.render(this._scene, this._camera);
-      this._isDirty = false;
+  public render(scene: THREE.Scene): void {
+    if (!scene) {
+      console.warn('Attempting to render with null scene');
+      return;
     }
+    this._renderer.render(scene, this._camera);
   }
 
   public camera(): THREE.Camera {
     return this._camera;
   }
 
-  public domElement(): HTMLElement {
-    return this._renderer.domElement;
-  }
-
   public renderer(): THREE.WebGLRenderer {
     return this._renderer;
   }
 
-  public makeDirty(): void {
-    this._isDirty = true;
+  public domElement(): HTMLElement {
+    return this._renderer.domElement;
   }
 }
-
-export { RenderView, RenderViewInterface };
