@@ -7,6 +7,7 @@
     "build": "vite build"
   },
   "dependencies": {
+    "cesium": "^1.114.0",
     "@city-engine/core": "workspace:*",
     "@types/gsap": "^3.0.0",
     "@types/three": "^0.173.0",
@@ -15,6 +16,7 @@
     "three": "^0.173.0"
   },
   "devDependencies": {
+    "@types/cesium": "^1.70.4",
     "sass": "^1.85.0"
   }
 }

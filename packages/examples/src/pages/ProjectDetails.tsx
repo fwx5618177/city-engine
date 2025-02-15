@@ -11,6 +11,7 @@ const DemoComponents: {
 } = {
   'city-3d': lazy(() => import('@/demos/InteractDemo')),
   'city-car': lazy(() => import('@/demos/CityTour')),
+  'city-gis': lazy(() => import('@/demos/CityGIS')),
 };
 
 const ProjectDetails: React.FC = () => {
