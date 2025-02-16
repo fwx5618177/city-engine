@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiExternalLink, FiFolder, FiGithub } from 'react-icons/fi';
+import { FiFolder } from 'react-icons/fi';
 import { Link } from 'react-router-dom';
 
 import { projects } from '@/configs/projects';
@@ -35,17 +35,6 @@ const Projects: React.FC = () => {
                     {tech}
                   </span>
                 ))}
-              </div>
-              <div className={styles.projectCardActions}>
-                <a href={project.githubUrl} className={styles.projectCardLink}>
-                  <FiGithub /> GitHub
-                </a>
-                <a
-                  href={project.demoUrl}
-                  className={`${styles.projectCardLink} ${styles.secondary}`}
-                >
-                  <FiExternalLink /> Live Demo
-                </a>
               </div>
             </Link>
           ))}

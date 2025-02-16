@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { FiArrowLeft, FiExternalLink, FiGithub } from 'react-icons/fi';
+import { FiArrowLeft } from 'react-icons/fi';
 import { Link, useParams } from 'react-router-dom';
 
 import { projects } from '@/configs/projects';
@@ -64,25 +64,6 @@ const ProjectDetails: React.FC = () => {
                 </span>
               ))}
             </div>
-          </div>
-
-          <div className={styles.actions}>
-            <a
-              href={project.githubUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.actionButton}
-            >
-              <FiGithub /> 查看源码
-            </a>
-            <a
-              href={project.demoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`${styles.actionButton} ${styles.secondary}`}
-            >
-              <FiExternalLink /> 在线演示
-            </a>
           </div>
         </div>
 

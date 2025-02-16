@@ -7,7 +7,7 @@ import { viteStaticCopy } from 'vite-plugin-static-copy';
 
 const base = './';
 const cesiumSource = 'node_modules/cesium/Build/Cesium';
-const cesiumBaseUrl = 'cesiumStatic';
+const cesiumBaseUrl = 'mapStatic';
 
 export default defineConfig(({ mode }) => ({
   define: {

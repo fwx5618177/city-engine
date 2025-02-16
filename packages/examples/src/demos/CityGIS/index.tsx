@@ -117,7 +117,6 @@ const CityGIS: React.FC = () => {
   useEffect(() => {
     if (!cesiumContainerRef.current) return;
 
-    console.log('cesiumContainerRef.current', cesiumContainerRef.current);
     // 初始化 Cesium Viewer
     const viewer = new Viewer(cesiumContainerRef.current, {
       terrainProvider: new EllipsoidTerrainProvider(),
